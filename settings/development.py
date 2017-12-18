@@ -18,3 +18,8 @@ STATIC_PATH = 'static'
 
 #Database settings
 DSN = 'dbname=alfred user=postgres password=password host=127.0.0.1 port=5432'
+
+#Security
+PW_ITERATIONS = 100000
+PW_ALGO = 'sha256'
+COOKIE_SECRET = 'RzTUnoYHGdyfoSCP4QYokjauoZeTnig6JIMuQhuiKA8OBdwRZq5gZOx65FnESa0h'

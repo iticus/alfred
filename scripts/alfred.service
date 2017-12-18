@@ -1,0 +1,14 @@
+[Unit]
+Description=Alfred Service
+After=default.target
+
+[Service]
+User=www-data
+Group=www-data
+RestartSec=3
+Restart=always
+WorkingDirectory=/var/www/alfred
+ExecStart=/usr/bin/python3 alfred.py
+
+[Install]
+WantedBy=default.target
