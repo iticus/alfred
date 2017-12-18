@@ -1,0 +1,14 @@
+[Unit]
+Description=R433Mhz Light Service
+After=default.target
+
+[Service]
+User=www-data
+Group=www-data
+RestartSec=3
+Restart=always
+WorkingDirectory=/var/www
+ExecStart=/usr/bin/python3 light.py
+
+[Install]
+WantedBy=default.target
