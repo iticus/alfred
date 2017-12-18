@@ -48,9 +48,10 @@ function cameras() {
 		for (var i=0;i<data['cameras'].length;i++) {
 			var ca = data['cameras'][i];
 			signalById[ca['id']] = ca;
-			html += '<div class="signal">'
+			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
-			html += '<label class="switch"><input type="checkbox" id="' + ca['id'] + '"><span class="slider round"></span></label>';
+			html += '<img src="/static/img/picture.png" id="' + ca['id'] + '">';
+			html += '<img src="/static/img/video.png" id="' + ca['id'] + '">';
 			html += '</div>';
 		}
 		$('#content').html(html);
@@ -59,6 +60,7 @@ function cameras() {
 
 function about() {
 	handleActiveMenu('about');
+	$('#content').html('About me ...');
 }
 
 $(document).ready(function() {

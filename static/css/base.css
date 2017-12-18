@@ -59,6 +59,15 @@ div.signal {
 	padding: 10px;
 }
 
+div.signal img, div.signal span{
+	height: 6vh;
+	vertical-align: middle;
+}
+
+div.signal img {
+	padding-left: 24px;
+}
+
 /* The switch - the box around the slider */
 .switch {
   position: relative;
