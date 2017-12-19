@@ -1,6 +1,7 @@
 body {
 	margin:0;
-	font-size: 3.0vw;
+	font-size: 2em;
+	background-color: #eeeeee;
 }
 
 .topnav {
@@ -13,7 +14,7 @@ body {
   display: block;
   color: #f2f2f2;
   text-align: center;
-  padding: 14px 16px;
+  padding: 15px 15px;
   text-decoration: none;
 }
 
@@ -31,8 +32,25 @@ body {
   display: none;
 }
 
-@media screen and (max-width: 640px) {
-   body {font-size: 6.0vw;}
+#content {
+	padding: 10px;
+}
+
+div.signal {
+	padding: 10px;
+}
+
+div.signal img, div.signal span{
+	height: 1.5em;
+	vertical-align: middle;
+}
+
+div.signal img {
+	padding-left: 24px;
+}
+
+@media screen and (max-width: 640px) and (orientation: portrait) {
+   body {font-size: 1.5em;}
   .topnav a:not(:first-child) {display: none;}
   .topnav a.icon {
     float: right;
@@ -49,31 +67,17 @@ body {
     display: block;
     text-align: left;
   }
-}
-
-#content {
-	padding: 10px;
-}
-
-div.signal {
-	padding: 10px;
-}
-
-div.signal img, div.signal span{
-	height: 6vh;
-	vertical-align: middle;
-}
-
-div.signal img {
-	padding-left: 24px;
+  div.signal img, div.signal span{
+	height: 1.5em;
+  }
 }
 
 /* The switch - the box around the slider */
 .switch {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 34px;
+  width: 3em;
+  height: 1em;
   margin-left: 15px;
 }
 
@@ -96,10 +100,10 @@ div.signal img {
 .slider:before {
   position: absolute;
   content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
+  height: 1.3em;
+  width: 1.5em;
+  left: 0.1em;
+  bottom: 0.1em;
   background-color: white;
   -webkit-transition: .4s;
   transition: .4s;
@@ -114,14 +118,14 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  -webkit-transform: translateX(1.3em);
+  -ms-transform: translateX(1.3em);
+  transform: translateX(1.3em);
 }
 
 /* Rounded sliders */
 .slider.round {
-  border-radius: 34px;
+  border-radius: 2em;
 }
 
 .slider.round:before {

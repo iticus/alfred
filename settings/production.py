@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
 
 #Tornado settings
 ADDRESS = '0.0.0.0'
-PORT = 9000
+PORT = 8000
 TEMPLATE_PATH = 'templates'
 STATIC_PATH = 'static'
 
