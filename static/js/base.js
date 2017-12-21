@@ -26,24 +26,26 @@ function getImage(signal) {
 	var dt = new Date();
 	var params = {'sid': signal['id'], 'url': signal['url'], 'dt': dt.getTime()};
 	$('#camdata').attr('src', '/cameras/?' + jQuery.param(params));
-	$('#camdata').show();
 }
 
 function getSnapshot(source) {
 	var signal = signalById[source.id];
 	getImage(signal);
+	$('#camdata').show();
 }
 
 function getStream(source) {
 	signal = signalById[source.id];
 	streamEnabled = true;
 	getImage(signal);
+	$('#camdata').show();
 	$("#camdata").bind("load", function() {
 		if (streamEnabled) {
 			setTimeout(getImage, 333, signal);
 		}
 		else {
-			$('#camdata').css('display', 'none');
+			$('#camdata').off('load');
+			$('#camdata').hide();
 		}
 	});
 }
@@ -103,6 +105,6 @@ $(document).ready(function() {
 	});
 	$(document).on('click', '#camdata', function(event) {
 		streamEnabled = false;
-		$('#camdata').css('display', 'none');
+		$('#camdata').hide();
 	});
 });
