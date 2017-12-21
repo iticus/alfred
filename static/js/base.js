@@ -1,4 +1,5 @@
 var signalById = {};
+var streamEnabled = false;
 
 function topNav() {
     var x = document.getElementById("topNav");
@@ -19,6 +20,32 @@ function handleActiveMenu(text) {
 		}
 	});
 	$('.topnav').removeClass('responsive');
+}
+
+function getImage(signal) {
+	var dt = new Date();
+	var params = {'sid': signal['id'], 'url': signal['url'], 'dt': dt.getTime()};
+	$('#camdata').attr('src', '/cameras/?' + jQuery.param(params));
+	$('#camdata').show();
+}
+
+function getSnapshot(source) {
+	var signal = signalById[source.id];
+	getImage(signal);
+}
+
+function getStream(source) {
+	signal = signalById[source.id];
+	streamEnabled = true;
+	getImage(signal);
+	$("#camdata").bind("load", function() {
+		if (streamEnabled) {
+			setTimeout(getImage, 333, signal);
+		}
+		else {
+			$('#camdata').css('display', 'none');
+		}
+	});
 }
 
 function switches() {
@@ -50,8 +77,8 @@ function cameras() {
 			signalById[ca['id']] = ca;
 			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
-			html += '<img src="/static/img/picture.png" id="' + ca['id'] + '">';
-			html += '<img src="/static/img/video.png" id="' + ca['id'] + '">';
+			html += '<img src="/static/img/picture.png" id="' + ca['id'] + '" onclick="getSnapshot(this)">';
+			html += '<img src="/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);
@@ -73,5 +100,9 @@ $(document).ready(function() {
 	    $.post('/switches', data).done(function (msg) {}).fail(function () {
 	    	alert('cannot toggle');
 	    });
+	});
+	$(document).on('click', '#camdata', function(event) {
+		streamEnabled = false;
+		$('#camdata').css('display', 'none');
 	});
 });

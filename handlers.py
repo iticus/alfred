@@ -69,9 +69,18 @@ class CamerasHandler(BaseHandler):
 
     @tornado.gen.coroutine
     def get(self):
-        """Return available locality data for state_id, text"""
-        cameras = yield self.db_client.get_camera_signals()
-        self.finish({'status': 'OK', 'cameras': cameras})
+        """Return all available cameras or single camera data"""
+        sid = self.get_argument('sid', None)
+        url = self.get_argument('url', None)
+        if not sid or not url:
+            cameras = yield self.db_client.get_camera_signals()
+            return self.finish({'status': 'OK', 'cameras': cameras})
+        
+        sid = int(sid)
+        url = url + '/?action=snapshot'
+        client = AsyncHTTPClient()
+        response = yield client.fetch(url)
+        self.finish(response.body)
 
 
 class AboutHandler(BaseHandler):

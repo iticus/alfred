@@ -2,6 +2,18 @@ body {
 	margin:0;
 	font-size: 2em;
 	background-color: #eeeeee;
+	height: 100%;
+}
+
+#camdata {
+	display: none;
+	position: absolute;
+    width: 80%;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    margin: auto;
 }
 
 .topnav {
@@ -70,6 +82,13 @@ div.signal img {
   div.signal img, div.signal span{
 	height: 1.5em;
   }
+  #camdata {
+    padding-top: 10px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+  
 }
 
 /* The switch - the box around the slider */

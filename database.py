@@ -18,10 +18,18 @@ class DBClient(object):
 
     def __init__(self, dsn, ioloop=None):
         self.dsn = dsn
-        self.connection = momoko.Pool(dsn=self.dsn, ioloop=ioloop, raise_connect_errors=True,
-                                      cursor_factory=psycopg2.extras.RealDictCursor, size=2)
+        self.ioloop = ioloop
         self.connected = False
 
+
+    @coroutine
+    def connect(self):
+        self.connection = momoko.Pool(dsn=self.dsn, ioloop=self.ioloop, raise_connect_errors=True,
+                                      cursor_factory=psycopg2.extras.RealDictCursor, size=2)
+        result = yield self.connection.connect()
+        logging.debug('connected to database, %s', result)
+        self.connected = True
+        
 
     @coroutine
     def raw_query(self, query, params=None):
@@ -32,9 +40,8 @@ class DBClient(object):
         :returns database objects or True/False for success/failure
         """
         if not self.connected:
-            result = yield self.connection.connect()
-            logging.debug('connected to database, %s', result)
-            self.connected = True
+            yield self.connect()
+            
         try:
             cursor = yield self.connection.execute(query, params)
         except psycopg2.Error as exc:
