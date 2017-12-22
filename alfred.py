@@ -73,8 +73,7 @@ def make_app(settings_module=None, ioloop=None):
             (r"/", handlers.HomeHandler),
             (r"/sensors/?", handlers.SensorsHandler),
             (r"/switches/?", handlers.SwitchesHandler),
-            (r"/cameras/?", handlers.CamerasHandler),
-            (r"/about/?", handlers.AboutHandler)
+            (r"/cameras/?", handlers.CamerasHandler)
         ],
         template_path=settings_module.TEMPLATE_PATH,
         static_path=settings_module.STATIC_PATH,

@@ -6,6 +6,7 @@ Created on Dec 17, 2017
 
 import tornado.web
 from tornado.httpclient import AsyncHTTPClient
+import utils
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -65,13 +66,8 @@ class SwitchesHandler(BaseHandler):
         sid = int(self.get_argument('sid'))
         url = self.get_argument('url')
         state = self.get_argument('state')
-        if state == '1':
-            url += '/turn_on'
-        else:
-            url += '/turn_off'
-        client = AsyncHTTPClient()
-        response = yield client.fetch(url, method='POST', body='{}')
-        if response.body.decode() != 'OK':
+        response = yield utils.control_switch(url, state)
+        if response != 'OK':
             return self.finish({'status': 'error'})
         self.application.cache[sid] = True if state == '1' else False
         self.finish({'status': 'OK'})
@@ -91,21 +87,9 @@ class CamerasHandler(BaseHandler):
         if not sid or not url:
             cameras = yield self.db_client.get_camera_signals()
             return self.finish({'status': 'OK', 'cameras': cameras})
-        
+
         sid = int(sid)
         url = url + '/?action=snapshot'
         client = AsyncHTTPClient()
         response = yield client.fetch(url)
         self.finish(response.body)
-
-
-class AboutHandler(BaseHandler):
-    """Request Handler for "/about"
-    Available methods: GET
-    """
-
-
-    @tornado.gen.coroutine
-    def get(self):
-        """Return available street data for locality_id, text"""
-        self.render('home.html')

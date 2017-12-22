@@ -21,10 +21,4 @@ CREATE TABLE signals (
 
 /*
 stypes: sensor, switch, camera
-INSERT INTO signals(name, stype, url, attributes) VALUES('Living room','sensor','http://172.16.229.187:8080','{}');
-INSERT INTO signals(name, stype, url, attributes) VALUES('Back icicles','switch','http://172.16.229.252:8080','{}');
-INSERT INTO signals(name, stype, url, attributes) VALUES('Backyard light','switch','http://172.16.229.51:8080','{}');
-INSERT INTO signals(name, stype, url, attributes) VALUES('Front icicles ','switch','http://172.16.229.177:8080','{}');
-INSERT INTO signals(name, stype, url, attributes) VALUES('Back camera','camera','http://172.16.229.21:8080','{}');
-INSERT INTO signals(name, stype, url, attributes) VALUES('Front camera','camera','http://172.16.229.22:8080','{}'); 
 /*

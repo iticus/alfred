@@ -110,11 +110,6 @@ function cameras() {
 	});
 }
 
-function about() {
-	handleActiveMenu('about');
-	$('#content').html('About me ...');
-}
-
 $(document).ready(function() {
 	$(document).on('click', 'input:checkbox', function(event) {
 	    // this will contain a reference to the checkbox
