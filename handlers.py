@@ -28,6 +28,22 @@ class HomeHandler(BaseHandler):
         self.render('home.html')
 
 
+class SensorsHandler(BaseHandler):
+    """Request Handler for "/sensors"
+    Available methods: GET
+    """
+
+
+    @tornado.gen.coroutine
+    def get(self):
+        """Return all switches data"""
+        sensors = yield self.db_client.get_sensor_signals()
+        for sensor in sensors:
+            sensor['value'] = self.application.cache.get(sensor['id'], None)
+        self.finish({'status': 'OK', 'sensors': sensors})
+
+
+
 class SwitchesHandler(BaseHandler):
     """Request Handler for "/switches"
     Available methods: GET, POST

@@ -53,7 +53,34 @@ class DBClient(object):
             logging.debug('got %d results', len(result))
             return result
 
-        return True
+        return []
+
+
+    @coroutine
+    def get_signals(self, stype=None):
+        """
+        Return all signals onf stype or all signals if None
+        :param stype: signal type (sensor, switch, camera)
+        """
+        query = "SELECT id,name,stype,url,attributes FROM signals"
+        data = []
+        if stype:
+            query += " WHERE stype=%s ORDER BY name"
+            data.append(stype)
+        signals = yield self.raw_query(query, data)
+        if not signals:
+            return []
+        return signals
+
+
+    @coroutine
+    def get_sensor_signals(self):
+        """
+        Get sensor signal data
+        :returns: list of sensor signals
+        """
+        sensors = yield self.get_signals('sensor')
+        return sensors
 
 
     @coroutine
@@ -62,8 +89,7 @@ class DBClient(object):
         Get light signal data
         :returns: list of light signals
         """
-        query = "SELECT id,name,url,attributes FROM signals where stype='switch'"
-        switches = yield self.raw_query(query)
+        switches = yield self.get_signals('switch')
         return switches
 
 
@@ -73,6 +99,5 @@ class DBClient(object):
         Get camera signal data
         :returns: list of camera signals
         """
-        query = "SELECT id,name,url,attributes FROM signals where stype='camera'"
-        cameras = yield self.raw_query(query)
+        cameras = yield self.get_signals('camera')
         return cameras

@@ -16,15 +16,20 @@ def control(app):
     :param app: tornado application instance
     """
     client = AsyncHTTPClient()
-    signals = yield app.database.get_switch_signals()
+    signals = yield app.database.get_signals()
     for signal in signals:
+        if signal['stype'] == 'camera':
+            continue
         try:
             response = yield client.fetch(signal['url'])
         except Exception as exc:
             logging.error('cannot retrieve signal data for %s: %s', signal['name'], exc)
             continue
         value = response.body.decode()
-        app.cache[signal['id']] = True if value in ['1', '1,1'] else False
+        if signal['stype'] == 'sensor':
+            app.cache[signal['id']] = value
+        else:
+            app.cache[signal['id']] = True if value in ['1', '1,1'] else False
 
     #TODO: implement schedules
 

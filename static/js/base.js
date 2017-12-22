@@ -50,6 +50,29 @@ function getStream(source) {
 	});
 }
 
+function sensors() {
+	$.get('/sensors', function (data) {
+		handleActiveMenu('sensors');
+		var html = "";
+		for (var i=0;i<data['sensors'].length;i++) {
+			var se = data['sensors'][i];
+			signalById[se['id']] = se;
+			html += '<div class="signal">'
+			html += '<span id="' + se['id'] + '">' + se['name'] + '</span>';
+			html +='<span class="sensor">'
+			if (se['value'].indexOf(',') > -1) {
+				var parts = se['value'].split(',');
+				html += parts[0] + '&#176;C, ' + parts[1] + '% rH';
+			}
+			else {
+				html += se['value'];
+			}
+			html += '</span></div>';
+		}
+		$('#content').html(html);
+	});
+}
+
 function switches() {
 	$.get('/switches', function (data) {
 		handleActiveMenu('switches');

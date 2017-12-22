@@ -14,6 +14,8 @@ body {
     top: 0px;
     bottom: 0px;
     margin: auto;
+    box-shadow: 2px 2px 20px 3px #000;
+    border-radius: 5px;
 }
 
 .topnav {
@@ -50,6 +52,11 @@ body {
 
 div.signal {
 	padding: 10px;
+}
+
+span.sensor {
+	padding-left: 10px;
+	color: #5cb85c;
 }
 
 div.signal img, div.signal span{
