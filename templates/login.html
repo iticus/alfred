@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Alfred</title>
+	<link rel="manifest" href="/static/manifest.webmanifest">
+	<link rel="shortcut icon" href="/static/img/logo_48.png">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<link rel="stylesheet" href="/static/css/base.css">
+	<script src="/static/js/jquery-3.2.1.min.js"></script>
+	<script src="/static/js/base.js"></script>
+</head>
+<body>
+    <div style="padding: 25px;">
+      <div class="form">
+        <form class="login-form" action="/login/" method="post" id="login_form">
+          {% module xsrf_form_html() %}
+          <input type="text" placeholder="username" id="username" name="username" autofocus/>
+          <br>
+          <input type="password" placeholder="password" id="password" name="password"/>
+          <br>
+          <button>login</button>
+          {% if error_message %}
+            <p class="message">{{error_message}}</p>
+          {% end %}
+        </form>
+      </div>
+    </div>
+</body>
+</html>

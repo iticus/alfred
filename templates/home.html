@@ -18,9 +18,13 @@
 		<a href="javascript:void(0);" class="icon" onclick="topNav()">&#9776;</a>
 	</div>
 	<div id="content">
-		<h2>Welcome!</h2>
+		<h2>Welcome, <strong>{{current_user}}</strong>!</h2>
 		<p>Alfred is ready.</p>
-	</div>
+         <form action="/logout/" method="post" style="display: inline-block;">
+           {% module xsrf_form_html() %}
+           <button>Log out</button>
+         </form>
+    </div>
 	<img id="camdata" src="/static/img/logo_192.png" alt="CAMERA DATA" />
 </body>
 </html>

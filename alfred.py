@@ -71,13 +71,17 @@ def make_app(settings_module=None, ioloop=None):
     app = tornado.web.Application(
         [
             (r"/", handlers.HomeHandler),
+            (r"/login/?", handlers.LoginHandler),
+            (r"/logout/?", handlers.LogoutHandler),
             (r"/sensors/?", handlers.SensorsHandler),
             (r"/switches/?", handlers.SwitchesHandler),
             (r"/cameras/?", handlers.CamerasHandler)
         ],
         template_path=settings_module.TEMPLATE_PATH,
         static_path=settings_module.STATIC_PATH,
-        cookie_secret=settings_module.COOKIE_SECRET
+        cookie_secret=settings_module.COOKIE_SECRET,
+        login_url='/login/',
+        xsrf_cookies=True
     )
     app.config = settings_module
     app.database = DBClient(settings_module.DSN, ioloop)

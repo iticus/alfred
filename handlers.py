@@ -12,6 +12,7 @@ import utils
 class BaseHandler(tornado.web.RequestHandler):
     """Base Handler to be inherited / implemented by subsequent handlers"""
 
+
     def get_current_user(self):
         return self.get_secure_cookie('username')
 
@@ -21,11 +22,63 @@ class BaseHandler(tornado.web.RequestHandler):
         self.db_client = self.application.database
 
 
+class LoginHandler(BaseHandler):
+    """Request Handler for "/login", checks login details and sets cookie"""
+
+
+    def get(self):
+        if self.get_secure_cookie('username'):
+            return self.redirect(self.get_argument('next', '/'))
+
+        error_message = self.get_argument('error', '')
+        self.render('login.html', error_message=error_message)
+
+
+    @tornado.gen.coroutine
+    def post(self):
+        username = self.get_argument('username', '')
+        password = self.get_argument('password', '')
+        user = yield self.db_client.get_user(username)
+        if not user or not utils.compare_pwhashes(user['password'],
+                                                  password, self.config.PW_ITERATIONS):
+            error_msg = '?error=' + tornado.escape.url_escape('login incorrect')
+            return self.redirect('/login/' + error_msg)
+
+        self.set_current_user(user)
+        self.redirect(self.get_argument('next', '/'))
+
+
+    def set_current_user(self, user):
+        """
+        Set cookie if user is user is set
+        :param user: user data
+        """
+        if user:
+            self.set_secure_cookie('username', tornado.escape.json_encode(user['username']))
+        else:
+            self.clear_cookie('username')
+
+
+class LogoutHandler(BaseHandler):
+    """Request Handler for "/logout", clears cookie"""
+
+
+    def get(self):
+        return self.redirect('/')
+
+
+    def post(self):
+        self.clear_cookie('username')
+        self.redirect(self.get_argument('next', '/'))
+
+
 class HomeHandler(BaseHandler):
     """Request Handler for "/", render home template"""
 
 
+    @tornado.web.authenticated
     def get(self):
+        #self.xsrf_token
         self.render('home.html')
 
 
@@ -35,6 +88,7 @@ class SensorsHandler(BaseHandler):
     """
 
 
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         """Return all switches data"""
@@ -51,6 +105,7 @@ class SwitchesHandler(BaseHandler):
     """
 
 
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         """Return all switches data"""
@@ -60,6 +115,7 @@ class SwitchesHandler(BaseHandler):
         self.finish({'status': 'OK', 'switches': switches})
 
 
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self):
         """Toggle switch"""
@@ -79,6 +135,7 @@ class CamerasHandler(BaseHandler):
     """
 
 
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         """Return all available cameras or single camera data"""

@@ -4,10 +4,17 @@ Created on Dec 18, 2017
 @author: ionut
 '''
 
+import binascii
 import datetime
 import logging
+import os
 from tornado.gen import coroutine
 from tornado.httpclient import AsyncHTTPClient
+try:
+    from hashlib import pbkdf2_hmac
+    from hmac import compare_digest
+except ImportError:
+    from backports.pbkdf2 import pbkdf2_hmac, compare_digest
 
 
 def time_to_minutes(time_value):
@@ -93,3 +100,32 @@ def format_frame(frame):
     for key, value in frame.f_locals.items():
         buf += '\t%s -> %s\n' % (key, value)
     return buf
+
+
+def make_pwhash(algo, password, iterations):
+    """
+    Generate pbkdf2_hmac password hash using random salt and num interations
+    :param algo: hashing algorithm to be use such as "sha1" or "sha256"
+    :param password: password text to be hashed
+    :param iterations: number of hashing runs
+    :returns: algo$salt$hash
+    """
+    salt = binascii.hexlify(os.urandom(16))
+    hsh = pbkdf2_hmac(algo, password.encode(), salt, iterations)
+    hsh = binascii.hexlify(hsh)
+    hsh = '%s$%s$%s' % (algo, salt.decode(), hsh.decode())
+    return hsh
+
+
+def compare_pwhashes(pwhash, password, iterations):
+    """
+    Compute hash for current password and compare it to pwhash
+    :param pwhash: previously generated pwhash to be compared
+    :param password: password text to compute hash for
+    :param iterations: number of hashing runs
+    :returns: True or False
+    """
+    algo, salt, hsh = pwhash.split('$')
+    derived_key = pbkdf2_hmac(algo, password.encode(), salt.encode(), iterations)
+    derived_key = binascii.hexlify(derived_key)
+    return compare_digest(derived_key, hsh.encode())

@@ -1,6 +1,11 @@
 var signalById = {};
 var streamEnabled = false;
 
+function getCookie(name) {
+    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+    return r ? r[1] : undefined;
+}
+
 function topNav() {
     var x = document.getElementById("topNav");
     if (x.className === "topnav") {
@@ -114,6 +119,7 @@ $(document).ready(function() {
 	$(document).on('click', 'input:checkbox', function(event) {
 	    // this will contain a reference to the checkbox
 		data = {'sid': this.id, 'url': signalById[this.id]['url'], 'state': 0};
+		data['_xsrf'] = getCookie("_xsrf");
 	    if (this.checked) {
 	        data['state'] = 1;
 	    }

@@ -61,10 +61,26 @@ class DBClient(object):
 
 
     @coroutine
+    def get_user(self, username):
+        """
+        Return first user matching username
+        :param username: data to match the username against
+        :return user
+        """
+        query = "SELECT id,name,username,password FROM users WHERE username=%s"
+        data = (username, )
+        users = yield self.raw_query(query, data)
+        if not users:
+            return []
+        return users[0]
+
+
+    @coroutine
     def get_signals(self, stype=None):
         """
         Return all signals onf stype or all signals if None
         :param stype: signal type (sensor, switch, camera)
+        :return: list of signal
         """
         query = "SELECT id,name,stype,url,attributes FROM signals"
         data = []
