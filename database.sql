@@ -18,7 +18,15 @@ CREATE TABLE signals (
       url text NOT NULL,
       attributes jsonb
 );
-
 /*
 stypes: sensor, switch, camera
 /*
+
+--subscriptions
+CREATE TABLE subscriptions (
+      id serial PRIMARY KEY,
+	  added_timestamp timestamp without time zone NOT NULL,
+	  endpoint text,
+      key text NOT NULL,
+      auth_secret text NOT NULL
+);

@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 22, 2017
 
 @author: ionut
-'''
+"""
 
 import getpass
 import tornado
@@ -17,9 +17,9 @@ def create_admin_user(ioloop):
     Create IOLoop and run create_admin_user
     :param ioloop: existing ioloop instance
     """
-    name = input('Name: ')
-    username = input('Username: ')
-    password = getpass.getpass(prompt='Password: ')
+    name = input("Name: ")
+    username = input("Username: ")
+    password = getpass.getpass(prompt="Password: ")
     app = alfred.make_app(None, ioloop)
     password = utils.make_pwhash(app.config.PW_ALGO, password,
                                  app.config.PW_ITERATIONS)
@@ -39,5 +39,5 @@ def main():
     ioloop.run_sync(lambda: create_admin_user(ioloop))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,3 +1,8 @@
+var endpoint;
+var key;
+var authSecret;
+var alreadySubscribed = false; 
+
 var signalById = {};
 var streamEnabled = false;
 
@@ -5,6 +10,57 @@ function getCookie(name) {
     var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
     return r ? r[1] : undefined;
 }
+
+function urlB64ToUint8Array(base64String) {
+	  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+	  const base64 = (base64String + padding)
+	    .replace(/\-/g, '+')
+	    .replace(/_/g, '/');
+
+	  const rawData = window.atob(base64);
+	  const outputArray = new Uint8Array(rawData.length);
+
+	  for (let i = 0; i < rawData.length; ++i) {
+	    outputArray[i] = rawData.charCodeAt(i);
+	  }
+	  return outputArray;
+	}
+
+navigator.serviceWorker.register('/service-worker.js')
+.then(function(registration) {
+  return registration.pushManager.getSubscription()
+  .then(function(subscription) {
+    if (subscription) {
+      alreadySubscribed = true;
+      return subscription;
+    }
+    return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(window.vapidPublicKey)});
+  });
+}).then(function(subscription) {
+  if (alreadySubscribed) {
+	  return
+  }
+  var rawKey = subscription.getKey ? subscription.getKey('p256dh') : '';
+  key = rawKey ?
+        btoa(String.fromCharCode.apply(null, new Uint8Array(rawKey))) : '';
+  var rawAuthSecret = subscription.getKey ? subscription.getKey('auth') : '';
+  authSecret = rawAuthSecret ? btoa(String.fromCharCode.apply(null, new Uint8Array(rawAuthSecret))) : '';
+  endpoint = subscription.endpoint;
+  
+  fetch('/subscribe', {
+    method: 'post',
+    credentials: 'include',
+    headers: {
+      'Content-type': 'application/json',
+      'X-XSRFToken': getCookie("_xsrf")
+    },
+    body: JSON.stringify({
+      endpoint: subscription.endpoint,
+      key: key,
+      authSecret: authSecret,
+    }),
+  });
+});
 
 function topNav() {
     var x = document.getElementById("topNav");

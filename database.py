@@ -1,9 +1,10 @@
-'''
+"""
 Created on Dec 17, 2017
 
 @author: ionut
-'''
+"""
 
+import datetime
 import logging
 import momoko
 import psycopg2
@@ -31,7 +32,7 @@ class DBClient(object):
         self.connection = momoko.Pool(dsn=self.dsn, ioloop=self.ioloop, raise_connect_errors=True,
                                       cursor_factory=psycopg2.extras.RealDictCursor, size=2)
         result = yield self.connection.connect()
-        logging.debug('connected to database, %s', result)
+        logging.debug("connected to database, %s", result)
         self.connected = True
 
 
@@ -49,12 +50,12 @@ class DBClient(object):
         try:
             cursor = yield self.connection.execute(query, params)
         except psycopg2.Error as exc:
-            logging.error('cannot execute query %s: %s', query, exc)
+            logging.error("cannot execute query %s: %s", query, exc)
             return False
 
         if cursor.rowcount > 0:
             result = cursor.fetchall()
-            logging.debug('got %d results', len(result))
+            logging.debug("got %d results", len(result))
             return result
 
         return []
@@ -73,6 +74,21 @@ class DBClient(object):
         if not users:
             return []
         return users[0]
+
+
+    @coroutine
+    def add_subscription(self, subscription):
+        """
+        Add new subscription object
+        :param subscription: subscription info from browser
+        :return subscription ID
+        """
+        query = """INSERT INTO subscriptions(added_timestamp,endpoint,key,auth_secret)
+        VALUES(%s,%s,%s,%s) RETURNING id"""
+        data = (datetime.datetime.utcnow(), subscription["endpoint"], subscription["key"], 
+                subscription["authSecret"])
+        result = yield self.raw_query(query, data)
+        return result
 
 
     @coroutine
@@ -99,7 +115,7 @@ class DBClient(object):
         Get sensor signal data
         :returns: list of sensor signals
         """
-        sensors = yield self.get_signals('sensor')
+        sensors = yield self.get_signals("sensor")
         return sensors
 
 
@@ -109,7 +125,7 @@ class DBClient(object):
         Get light signal data
         :returns: list of light signals
         """
-        switches = yield self.get_signals('switch')
+        switches = yield self.get_signals("switch")
         return switches
 
 
@@ -119,5 +135,5 @@ class DBClient(object):
         Get camera signal data
         :returns: list of camera signals
         """
-        cameras = yield self.get_signals('camera')
+        cameras = yield self.get_signals("camera")
         return cameras

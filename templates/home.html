@@ -2,11 +2,14 @@
 <html>
 <head>
 	<title>Alfred</title>
-	<link rel="manifest" href="/static/manifest.webmanifest">
+	<link rel="manifest" href="/manifest.json">
 	<link rel="shortcut icon" href="/static/img/logo_48.png">
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 	<link rel="stylesheet" href="/static/css/base.css">
 	<script src="/static/js/jquery-3.2.1.min.js"></script>
+	<script>
+		window.vapidPublicKey = "{{ vapid_public_key }}";
+	</script>
 	<script src="/static/js/base.js"></script>
 </head>
 <body>

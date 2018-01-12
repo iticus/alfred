@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 17, 2017
 
 @author: ionut
-'''
+"""
 
 import datetime
 import functools
@@ -21,12 +21,12 @@ from utils import format_frame, control
 def app_exit():
     """Stop IOLoop and exit"""
     tornado.ioloop.IOLoop.instance().stop()
-    logging.info('finished')
+    logging.info("finished")
 
 
 def cleanup_hook(exc_type, exc_value, exc_traceback):
     """Log exception details and call app_exit"""
-    logging.error('Uncaught exception, stopping', exc_info=(exc_type, exc_value, exc_traceback))
+    logging.error("Uncaught exception, stopping", exc_info=(exc_type, exc_value, exc_traceback))
     app_exit()
 
 
@@ -36,7 +36,7 @@ def configure_signals():
     def stopping_handler(signum, frame):
         """Log frame details and call app_exit"""
         frame_data = format_frame(frame)
-        logging.info('interrupt signal %s, frame %s received, stopping', signum, frame_data)
+        logging.info("interrupt signal %s, frame %s received, stopping", signum, frame_data)
         app_exit()
 
     signal.signal(signal.SIGINT, stopping_handler)
@@ -52,7 +52,7 @@ def run_control(app):
     try:
         yield control(app)
     except Exception as exc:
-        logging.error('cannot run control code: %s', exc)
+        logging.error("cannot run control code: %s", exc)
     tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=30),
                                                  functools.partial(run_control, app))
 
@@ -65,9 +65,9 @@ def make_app(settings_module=None, ioloop=None):
     :returns: application instance
     """
     if settings_module:
-        settings_module = importlib.import_module('settings.%s' % settings_module)
+        settings_module = importlib.import_module("settings.%s" % settings_module)
     else:
-        settings_module = importlib.import_module('settings.production')
+        settings_module = importlib.import_module("settings.production")
     app = tornado.web.Application(
         [
             (r"/", handlers.HomeHandler),
@@ -75,12 +75,15 @@ def make_app(settings_module=None, ioloop=None):
             (r"/logout/?", handlers.LogoutHandler),
             (r"/sensors/?", handlers.SensorsHandler),
             (r"/switches/?", handlers.SwitchesHandler),
-            (r"/cameras/?", handlers.CamerasHandler)
+            (r"/cameras/?", handlers.CamerasHandler),
+            (r"/subscribe/?", handlers.SubscribeHandler),
+            (r"/(manifest\.json)", tornado.web.StaticFileHandler, {"path": "static"}),
+            (r"/(service\-worker\.js)", tornado.web.StaticFileHandler, {"path": "static"}),
         ],
         template_path=settings_module.TEMPLATE_PATH,
         static_path=settings_module.STATIC_PATH,
         cookie_secret=settings_module.COOKIE_SECRET,
-        login_url='/login/',
+        login_url="/login/",
         xsrf_cookies=True
     )
     app.config = settings_module
@@ -93,7 +96,7 @@ def make_app(settings_module=None, ioloop=None):
 def main():
     """Start Tornado application instance"""
     application = make_app()
-    logging.info('starting alfred on %s:%s', application.config.ADDRESS, application.config.PORT)
+    logging.info("starting alfred on %s:%s", application.config.ADDRESS, application.config.PORT)
     application.listen(application.config.PORT, address=application.config.ADDRESS)
     run_control(application)
     if application.ioloop:
@@ -102,7 +105,7 @@ def main():
         tornado.ioloop.IOLoop.instance().start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.excepthook = cleanup_hook
     configure_signals()
     main()
