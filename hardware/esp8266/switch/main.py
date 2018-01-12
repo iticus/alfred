@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 16, 2017
 
 @author: ionut
-'''
+"""
 
 import machine
 import uasyncio as asyncio
@@ -13,12 +13,12 @@ pin = machine.Pin(13, machine.Pin.OUT)
 def serve(reader, writer):
     request = yield from reader.read()
     response = "HTTP/1.0 200 OK\r\n\r\n"
-    if 'POST /turn_on ' in request:
+    if "POST /turn_on " in request:
         pin.on()
-        yield from writer.awrite(response + 'OK')
-    elif 'POST /turn_off ' in request:
+        yield from writer.awrite(response + "OK")
+    elif "POST /turn_off " in request:
         pin.off()
-        yield from writer.awrite(response + 'OK')
+        yield from writer.awrite(response + "OK")
     else:
         value = "%s" % (pin.value())
         yield from writer.awrite(response + value)

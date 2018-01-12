@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 16, 2017
 
 @author: ionut
-'''
+"""
 
 import dht
 import machine

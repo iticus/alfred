@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 18, 2017
 
 @author: ionut
-'''
+"""
 
 import logging
 import os
@@ -26,8 +26,8 @@ class ControlHandler(tornado.web.RequestHandler):
     """
 
     def post(self):
-        logging.info('got command %s', self.request.uri)
-        os.system('sudo r433mhz 11111 1 0')
+        logging.info("got command %s", self.request.uri)
+        os.system("sudo r433mhz 11111 1 0")
         self.finish("OK")
 
 
@@ -46,8 +46,8 @@ def main():
     """
     Main function
     """
-    logging.basicConfig(level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
-                        format='[%(asctime)s] - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S",
+                        format="[%(asctime)s] - %(levelname)s - %(message)s")
     app = make_app()
     app.listen(8080)
     tornado.ioloop.IOLoop.current().start()
