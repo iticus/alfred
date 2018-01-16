@@ -15,7 +15,7 @@ import tornado.web
 
 import handlers
 from database import DBClient
-from utils import format_frame, control
+from utils import format_frame, control, send_push_notification
 
 
 def app_exit():
@@ -52,7 +52,17 @@ def run_control(app):
     try:
         yield control(app)
     except Exception as exc:
-        logging.error("cannot run control code: %s", exc)
+        payload = "cannot run control code: %s" % exc
+        logging.error(payload)
+        results = []
+        try:
+            subscriptions = yield app.database.get_subscriptions()
+            for subscription in subscriptions:
+                results.append(send_push_notification(payload, app.config, subscription))
+            yield results
+        except Exception as exc:
+            logging.error("cannot push notification, %s", exc)
+
     tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=30),
                                                  functools.partial(run_control, app))
 

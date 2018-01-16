@@ -8,6 +8,10 @@ import binascii
 import datetime
 import logging
 import os
+import time
+from urllib.parse import urlparse
+from pywebpush import WebPusher
+from py_vapid import Vapid
 from tornado.gen import coroutine
 from tornado.httpclient import AsyncHTTPClient
 try:
@@ -33,6 +37,7 @@ def control(app):
     Retrieve signal value and check that schedules are implemented
     :param app: tornado application instance
     """
+    error_msg = ""
     client = AsyncHTTPClient()
     signals = yield app.database.get_signals()
     now = datetime.datetime.now()
@@ -43,7 +48,8 @@ def control(app):
         try:
             response = yield client.fetch(signal["url"])
         except Exception as exc:
-            logging.error("cannot retrieve signal data for %s: %s", signal["name"], exc)
+            error_msg += "cannot retrieve signal data for %s: %s" % (signal["name"], exc)
+            logging.error(error_msg)
             continue
         value = response.body.decode()
         if signal["stype"] == "sensor":
@@ -70,6 +76,8 @@ def control(app):
                 elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
                     control_switch(signal["url"], "1")
                     app.cache[signal["id"]] = True
+    if error_msg:
+        raise Exception(error_msg)
 
 
 @coroutine
@@ -129,3 +137,56 @@ def compare_pwhashes(pwhash, password, iterations):
     derived_key = pbkdf2_hmac(algo, password.encode(), salt.encode(), iterations)
     derived_key = binascii.hexlify(derived_key)
     return compare_digest(derived_key, hsh.encode())
+
+
+def generate_vapid_headers(private_key_data, endpoint):
+    """
+    Generate vapid headers for web push call
+    :param private_key_data: private key string data
+    :param endpoint: endpoint URL from subscription info
+    :return: vapid Authorization header
+    """
+    url = urlparse(endpoint)
+    aud = "{}://{}".format(url.scheme, url.netloc)
+    vapid_claims = {
+        "aud": aud,
+        "exp": int(time.time()) + 86400,
+        "sub": "mailto:ticus.ionut@gmail.com"
+    }
+    vapid_key = Vapid.from_pem(private_key=private_key_data.encode())
+    headers = vapid_key.sign(vapid_claims)
+    return headers
+
+
+@coroutine
+def send_push_notification(payload, config, subscription):
+    """
+    Send push notification using subscription info (url and keys)
+    :param payload: payload (usable) data to be sent
+    :param config: configuration information from Tornado app
+    :param subscription: subscription info dict (keys, endpoint)
+    """
+    subscription_info = {
+        "endpoint": subscription["endpoint"],
+        "keys": {
+            "auth": subscription["auth_secret"],
+            "p256dh": subscription["key"]
+        }
+    }
+    web_push = WebPusher(subscription_info)
+    body = web_push.encode(payload, "aesgcm")
+    headers = generate_vapid_headers(config.VAPID_PRIVATE_KEY, subscription["endpoint"])
+    crypto_key = headers.get("Crypto-Key", "")
+    if crypto_key:
+        crypto_key += ";"
+    crypto_key += "dh=" + body["crypto_key"].decode()
+    headers.update({
+        "Crypto-Key": crypto_key,
+        "Content-Encoding": "aesgcm",
+        "Encryption": "salt=" + body["salt"].decode(),
+        "TTL": "86400"
+    })
+    client = AsyncHTTPClient()
+    result = yield client.fetch(subscription["endpoint"], method="POST",
+                                body=body["body"], headers=headers)
+    return result

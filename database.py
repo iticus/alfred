@@ -85,10 +85,21 @@ class DBClient(object):
         """
         query = """INSERT INTO subscriptions(added_timestamp,endpoint,key,auth_secret)
         VALUES(%s,%s,%s,%s) RETURNING id"""
-        data = (datetime.datetime.utcnow(), subscription["endpoint"], subscription["key"], 
+        data = (datetime.datetime.utcnow(), subscription["endpoint"], subscription["key"],
                 subscription["authSecret"])
         result = yield self.raw_query(query, data)
         return result
+
+
+    @coroutine
+    def get_subscriptions(self):
+        """
+        Return all subscription objects
+        :return subscriptions list
+        """
+        query = "SELECT id,added_timestamp,endpoint,key,auth_secret FROM subscriptions"
+        subscriptions = yield self.raw_query(query)
+        return subscriptions
 
 
     @coroutine
