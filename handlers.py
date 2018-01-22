@@ -32,7 +32,7 @@ class LoginHandler(BaseHandler):
             return self.redirect(self.get_argument("next", "/"))
 
         error_message = self.get_argument("error", "")
-        self.render("login.html", error_message=error_message)
+        return self.render("login.html", error_message=error_message)
 
 
     @tornado.gen.coroutine
@@ -46,7 +46,7 @@ class LoginHandler(BaseHandler):
             return self.redirect("/login/" + error_msg)
 
         self.set_current_user(user)
-        self.redirect(self.get_argument("next", "/"))
+        return self.redirect(self.get_argument("next", "/"))
 
 
     def set_current_user(self, user):
@@ -126,7 +126,7 @@ class SwitchesHandler(BaseHandler):
         if response != "OK":
             return self.finish({"status": "error"})
         self.application.cache[sid] = True if state == "1" else False
-        self.finish({"status": "OK"})
+        return self.finish({"status": "OK"})
 
 
 class CamerasHandler(BaseHandler):
@@ -149,7 +149,7 @@ class CamerasHandler(BaseHandler):
         url = url + "/?action=snapshot"
         client = AsyncHTTPClient()
         response = yield client.fetch(url)
-        self.finish(response.body)
+        return self.finish(response.body)
 
 
 class SubscribeHandler(BaseHandler):
@@ -166,4 +166,4 @@ class SubscribeHandler(BaseHandler):
         result = yield self.db_client.add_subscription(subscription)
         if not result:
             return self.finish({"status": "error"})
-        self.finish({"status": "OK"})
+        return self.finish({"status": "OK"})

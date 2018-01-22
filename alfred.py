@@ -12,6 +12,7 @@ import signal
 import sys
 import tornado.ioloop
 import tornado.web
+from tornado.gen import WaitIterator
 
 import handlers
 from database import DBClient
@@ -54,14 +55,19 @@ def run_control(app):
     except Exception as exc:
         payload = "cannot run control code: %s" % exc
         logging.error(payload)
-        results = []
-        try:
-            subscriptions = yield app.database.get_subscriptions()
-            for subscription in subscriptions:
-                results.append(send_push_notification(payload, app.config, subscription))
-            yield results
-        except Exception as exc:
-            logging.error("cannot push notification, %s", exc)
+        subscriptions = yield app.database.get_subscriptions()
+        sub_dict = {}
+        for subscription in subscriptions:
+            key = "%s" % subscription["id"]
+            sub_dict[key] = send_push_notification(payload, app.config, subscription)
+        wait_iterator = WaitIterator(**sub_dict)
+        while not wait_iterator.done():
+            try:
+                result = yield wait_iterator.next()
+                if result:
+                    logging.info("subscription %s, result %s", wait_iterator.current_index, result)
+            except Exception as exc:
+                logging.error("subscription %s, exception %s", wait_iterator.current_index, exc)
 
     tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=30),
                                                  functools.partial(run_control, app))

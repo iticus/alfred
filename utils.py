@@ -165,6 +165,7 @@ def send_push_notification(payload, config, subscription):
     :param payload: payload (usable) data to be sent
     :param config: configuration information from Tornado app
     :param subscription: subscription info dict (keys, endpoint)
+    :return: POST request result status code
     """
     subscription_info = {
         "endpoint": subscription["endpoint"],
@@ -189,4 +190,4 @@ def send_push_notification(payload, config, subscription):
     client = AsyncHTTPClient()
     result = yield client.fetch(subscription["endpoint"], method="POST",
                                 body=body["body"], headers=headers)
-    return result
+    return result.code
