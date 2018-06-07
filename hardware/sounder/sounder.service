@@ -1,0 +1,14 @@
+[Unit]
+Description=Sound Service
+After=default.target
+
+[Service]
+User=alarm
+Group=alarm
+RestartSec=3
+Restart=always
+WorkingDirectory=/var/www/sounder
+ExecStart=/usr/bin/python3 sounder.py
+
+[Install]
+WantedBy=default.target
