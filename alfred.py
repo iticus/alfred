@@ -91,6 +91,7 @@ def make_app(settings_module=None, ioloop=None):
             (r"/logout/?", handlers.LogoutHandler),
             (r"/sensors/?", handlers.SensorsHandler),
             (r"/switches/?", handlers.SwitchesHandler),
+            (r"/sounds/?", handlers.SoundsHandler),
             (r"/cameras/?", handlers.CamerasHandler),
             (r"/subscribe/?", handlers.SubscribeHandler),
             (r"/(manifest\.json)", tornado.web.StaticFileHandler, {"path": "static"}),

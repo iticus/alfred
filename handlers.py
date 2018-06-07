@@ -129,6 +129,31 @@ class SwitchesHandler(BaseHandler):
         return self.finish({"status": "OK"})
 
 
+class SoundsHandler(BaseHandler):
+    """Request Handler for "/sounds"
+    Available methods: GET, POST
+    """
+
+
+    @tornado.web.authenticated
+    @tornado.gen.coroutine
+    def get(self):
+        """Return all sound data"""
+        sounds = yield self.db_client.get_sound_signals()
+        self.finish({"status": "OK", "sounds": sounds})
+
+
+    @tornado.web.authenticated
+    @tornado.gen.coroutine
+    def post(self):
+        """Play sound"""
+        url = self.get_argument("url")
+        response = yield utils.play_sound(url)
+        if response != "OK":
+            return self.finish({"status": "error"})
+        return self.finish({"status": "OK"})
+
+
 class CamerasHandler(BaseHandler):
     """Request Handler for "/cameras/"
     Available methods: GET

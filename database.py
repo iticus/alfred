@@ -133,11 +133,21 @@ class DBClient(object):
     @coroutine
     def get_switch_signals(self):
         """
-        Get light signal data
-        :returns: list of light signals
+        Get switch signal data
+        :returns: list of switch signals
         """
         switches = yield self.get_signals("switch")
         return switches
+
+
+    @coroutine
+    def get_sound_signals(self):
+        """
+        Get sound signal data
+        :returns: list of sound signals
+        """
+        sounds = yield self.get_signals("sound")
+        return sounds
 
 
     @coroutine

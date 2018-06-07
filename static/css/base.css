@@ -18,6 +18,19 @@ body {
     border-radius: 5px;
 }
 
+#speaker {
+	display: none;
+	position: absolute;
+    width: 400px;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    margin: auto;
+    box-shadow: 2px 2px 20px 3px #000;
+    border-radius: 5px;
+}
+
 button {
     background-color: #17a2b8; 
     border: none;

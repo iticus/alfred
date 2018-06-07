@@ -43,7 +43,7 @@ def control(app):
     now = datetime.datetime.now()
     now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
-        if signal["stype"] == "camera":
+        if signal["stype"] == "camera" or signal["stype"] == "sound":
             continue
         try:
             response = yield client.fetch(signal["url"])
@@ -93,6 +93,19 @@ def control_switch(url, state):
         url += "/turn_on"
     else:
         url += "/turn_off"
+    client = AsyncHTTPClient()
+    response = yield client.fetch(url, method="POST", body="{}")
+    return response.body.decode()
+
+
+@coroutine
+def play_sound(url):
+    """
+    Play sound using url
+    :param url: sounder URL to make the POST request to
+    :return: decoded response body from POST request
+    """
+    logging.info("playing sound for URL %s", url)
     client = AsyncHTTPClient()
     response = yield client.fetch(url, method="POST", body="{}")
     return response.body.decode()

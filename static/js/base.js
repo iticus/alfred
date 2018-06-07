@@ -83,6 +83,16 @@ function handleActiveMenu(text) {
 	$('.topnav').removeClass('responsive');
 }
 
+function playSound(sound) {
+	var signal = signalById[sound.id];
+	var data = {"url": signal["url"], "_xsrf": getCookie("_xsrf")};
+	$('#speaker').show();
+    $.post('/sounds', data).done(function (msg) {$('#speaker').hide();}).fail(function () {
+    	alert('cannot play sound');
+    	$('#speaker').hide();
+    });
+}
+
 function getImage(signal) {
 	var dt = new Date();
 	var params = {'sid': signal['id'], 'url': signal['url'], 'dt': dt.getTime()};
@@ -148,6 +158,22 @@ function switches() {
 				html += ' checked';
 			}
 			html +='><span class="slider round"></span></label>';
+			html += '</div>';
+		}
+		$('#content').html(html);
+	});
+}
+
+function sounds() {
+	$.get('/sounds', function (data) {
+		handleActiveMenu('sounds');
+		var html = "";
+		for (var i=0;i<data['sounds'].length;i++) {
+			var so = data['sounds'][i];
+			signalById[so['id']] = so;
+			html += '<div class="signal">';
+			html += '<span id="' + so['id'] + '">' + so['name'] + '</span>';
+			html += '<img src="/static/img/speaker.png" id="' + so['id'] + '" onclick="playSound(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);
