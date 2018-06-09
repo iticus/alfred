@@ -92,7 +92,7 @@ div.signal img {
 	padding-left: 24px;
 }
 
-@media screen and (max-width: 640px) and (orientation: portrait) {
+@media screen and (max-width: 640px) {
    body {font-size: 1.5em;}
   .topnav a:not(:first-child) {display: none;}
   .topnav a.icon {
