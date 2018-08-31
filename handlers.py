@@ -206,6 +206,7 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
                 self.write_message(message, binary=True)
             except tornado.websocket.WebSocketClosedError:
                 break
+        conn.close()
 
 
 class SubscribeHandler(BaseHandler):
