@@ -6,7 +6,6 @@ Created on Dec 17, 2017
 
 import datetime
 import functools
-import importlib
 import logging
 import signal
 import sys
@@ -15,6 +14,7 @@ import tornado.web
 from tornado.gen import WaitIterator
 
 import handlers
+import settings
 from database import DBClient
 from utils import format_frame, control, send_push_notification
 
@@ -73,17 +73,12 @@ def run_control(app):
                                                  functools.partial(run_control, app))
 
 
-def make_app(settings_module=None, ioloop=None):
+def make_app(ioloop=None):
     """
     Create and return tornado.web.Application object so it can be used in tests too
-    :param settings_module: custom settings_module (production / development)
     :param ioloop: already existing ioloop (used for testing)
     :returns: application instance
     """
-    if settings_module:
-        settings_module = importlib.import_module("settings.%s" % settings_module)
-    else:
-        settings_module = importlib.import_module("settings.production")
     app = tornado.web.Application(
         [
             (r"/", handlers.HomeHandler),
@@ -93,18 +88,19 @@ def make_app(settings_module=None, ioloop=None):
             (r"/switches/?", handlers.SwitchesHandler),
             (r"/sounds/?", handlers.SoundsHandler),
             (r"/cameras/?", handlers.CamerasHandler),
+            (r"/video/?", handlers.VideoHandler),
             (r"/subscribe/?", handlers.SubscribeHandler),
             (r"/(manifest\.json)", tornado.web.StaticFileHandler, {"path": "static"}),
             (r"/(service\-worker\.js)", tornado.web.StaticFileHandler, {"path": "static"}),
         ],
-        template_path=settings_module.TEMPLATE_PATH,
-        static_path=settings_module.STATIC_PATH,
-        cookie_secret=settings_module.COOKIE_SECRET,
+        template_path=settings.TEMPLATE_PATH,
+        static_path=settings.STATIC_PATH,
+        cookie_secret=settings.COOKIE_SECRET,
         login_url="/login/",
         xsrf_cookies=True
     )
-    app.config = settings_module
-    app.database = DBClient(settings_module.DSN, ioloop)
+    app.config = settings
+    app.database = DBClient(settings.DSN, ioloop)
     app.cache = {}
     app.ioloop = ioloop
     return app

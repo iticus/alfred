@@ -11,6 +11,7 @@
 	<script>
 		window.vapidPublicKey = "{{ vapid_public_key }}";
 	</script>
+	<script src="/static/js/jsmpg.js"></script>
 	<script src="/static/js/base.js"></script>
 </head>
 <body>
@@ -30,7 +31,9 @@
            <button>Log out</button>
          </form>
     </div>
-	<img id="camdata" src="/static/img/logo_192.png" alt="CAMERA DATA" />
+	<!--<img id="camdata" src="/static/img/logo_192.png" alt="CAMERA DATA" />-->
+	<canvas id="camdata">
+	</canvas>
 	<img id="speaker" src="/static/img/speaker.gif" alt="speaker gif" />
 	
 </body>

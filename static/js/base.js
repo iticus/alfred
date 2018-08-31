@@ -4,7 +4,7 @@ var authSecret;
 var alreadySubscribed = false; 
 
 var signalById = {};
-var streamEnabled = false;
+var player;
 
 function getCookie(name) {
     var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
@@ -96,29 +96,23 @@ function playSound(sound) {
 function getImage(signal) {
 	var dt = new Date();
 	var params = {'sid': signal['id'], 'url': signal['url'], 'dt': dt.getTime()};
-	$('#camdata').attr('src', '/cameras/?' + jQuery.param(params));
+	//$('#camdata').attr('src', '/cameras/?' + jQuery.param(params));
 }
 
 function getSnapshot(source) {
-	var signal = signalById[source.id];
-	getImage(signal);
-	$('#camdata').show();
+	getStream(source); //show feed for snapshot too #TODO fixme
 }
 
 function getStream(source) {
 	signal = signalById[source.id];
-	streamEnabled = true;
-	getImage(signal);
 	$('#camdata').show();
-	$("#camdata").bind("load", function() {
-		if (streamEnabled) {
-			setTimeout(getImage, 333, signal);
-		}
-		else {
-			$('#camdata').off('load');
-			$('#camdata').hide();
-		}
-	});
+	var canvas = document.getElementById('camdata');
+	var ctx = canvas.getContext('2d');
+	ctx.fillStyle = '#444';
+	ctx.fillText('Loading...', canvas.width/2-30, canvas.height/3);
+	// Setup the WebSocket connection and start the player
+	var client = new WebSocket('ws://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"]);
+	player = new jsmpeg(client, {canvas: canvas});
 }
 
 function sensors() {
@@ -210,7 +204,9 @@ $(document).ready(function() {
 	    });
 	});
 	$(document).on('click', '#camdata', function(event) {
-		streamEnabled = false;
+		player.stop();
+		const context = player.canvas.getContext('2d');
+		context.clearRect(0, 0, player.canvas.width, player.canvas.height);
 		$('#camdata').hide();
 	});
 });

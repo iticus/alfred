@@ -20,7 +20,7 @@ def create_admin_user(ioloop):
     name = input("Name: ")
     username = input("Username: ")
     password = getpass.getpass(prompt="Password: ")
-    app = alfred.make_app(None, ioloop)
+    app = alfred.make_app(ioloop)
     password = utils.make_pwhash(app.config.PW_ALGO, password,
                                  app.config.PW_ITERATIONS)
     data = (name, username, password, 1)

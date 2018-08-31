@@ -5,8 +5,9 @@ Created on Dec 17, 2017
 """
 
 import json
+import logging
 import tornado.web
-from tornado.httpclient import AsyncHTTPClient
+import tornado.websocket
 import utils
 
 
@@ -163,18 +164,43 @@ class CamerasHandler(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
-        """Return all available cameras or single camera data"""
-        sid = self.get_argument("sid", None)
-        url = self.get_argument("url", None)
-        if not sid or not url:
-            cameras = yield self.db_client.get_camera_signals()
-            return self.finish({"status": "OK", "cameras": cameras})
+        """Return all available cameras"""
+        cameras = yield self.db_client.get_camera_signals()
+        return self.finish({"status": "OK", "cameras": cameras})
 
-        sid = int(sid)
-        url = url + "/?action=snapshot"
-        client = AsyncHTTPClient()
-        response = yield client.fetch(url)
-        return self.finish(response.body)
+
+class VideoHandler(tornado.websocket.WebSocketHandler):
+    """
+    Request Handler for "/video/"
+    """
+    
+    def open(self):
+        logging.info("new ws client %s", self)
+        url = self.get_argument("url", None)
+        if not url:
+            return self.close()
+        self.loop(url)
+
+
+    def on_close(self):
+        logging.info("removing ws client %s", self)
+
+
+    def on_message(self, message):
+        logging.info("got ws message %s from %s", message, self)
+
+
+    @tornado.gen.coroutine
+    def loop(self, url):
+        conn = yield tornado.websocket.websocket_connect(url)
+        while True:
+            message = yield conn.read_message()
+            if not message:
+                break
+            try:
+                self.write_message(message, binary=True)
+            except tornado.websocket.WebSocketClosedError:
+                break
 
 
 class SubscribeHandler(BaseHandler):
