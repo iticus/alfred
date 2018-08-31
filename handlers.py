@@ -173,13 +173,14 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
     """
     Request Handler for "/video/"
     """
-    
+
+
     def open(self):
         logging.info("new ws client %s", self)
         url = self.get_argument("url", None)
         if not url:
             return self.close()
-        self.loop(url)
+        return self.loop(url)
 
 
     def on_close(self):
@@ -192,6 +193,10 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def loop(self, url):
+        """
+        Open a new websocket connection and relay data to client
+        :param url: target websocket connection
+        """
         conn = yield tornado.websocket.websocket_connect(url)
         while True:
             message = yield conn.read_message()

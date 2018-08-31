@@ -93,12 +93,6 @@ function playSound(sound) {
     });
 }
 
-function getImage(signal) {
-	var dt = new Date();
-	var params = {'sid': signal['id'], 'url': signal['url'], 'dt': dt.getTime()};
-	//$('#camdata').attr('src', '/cameras/?' + jQuery.param(params));
-}
-
 function getSnapshot(source) {
 	getStream(source); //show feed for snapshot too #TODO fixme
 }
@@ -111,7 +105,7 @@ function getStream(source) {
 	ctx.fillStyle = '#444';
 	ctx.fillText('Loading...', canvas.width/2-30, canvas.height/3);
 	// Setup the WebSocket connection and start the player
-	var client = new WebSocket('ws://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"]);
+	var client = new WebSocket('wss://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"]);
 	player = new jsmpeg(client, {canvas: canvas});
 }
 

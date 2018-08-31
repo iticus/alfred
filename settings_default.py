@@ -24,3 +24,6 @@ DSN = "dbname=alfred user=postgres password=password host=127.0.0.1 port=5432"
 PW_ITERATIONS = 100000
 PW_ALGO = "sha256"
 COOKIE_SECRET = "XXX"
+
+VAPID_PRIVATE_KEY = open("private_key.pem").read()
+VAPID_PUBLIC_KEY = "XXX"

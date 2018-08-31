@@ -11,7 +11,7 @@ import psycopg2
 from tornado.gen import coroutine
 
 
-class DBClient(object):
+class DBClient():
     """
     Handle database communication using momoko
     """
