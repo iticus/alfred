@@ -4,7 +4,7 @@ var authSecret;
 var alreadySubscribed = false; 
 
 var signalById = {};
-var player;
+var player = null;
 
 function getCookie(name) {
     var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
@@ -98,6 +98,9 @@ function getSnapshot(source) {
 }
 
 function getStream(source) {
+	if (player !== null) {
+		player.destroy();
+	}
 	signal = signalById[source.id];
 	$('#camdata').show();
 	var canvas = document.getElementById('camdata');
@@ -105,8 +108,8 @@ function getStream(source) {
 	ctx.fillStyle = '#444';
 	ctx.fillText('Loading...', canvas.width/2-30, canvas.height/3);
 	// Setup the WebSocket connection and start the player
-	var client = new WebSocket('wss://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"]);
-	player = new jsmpeg(client, {canvas: canvas});
+	var url = 'wss://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"];
+	player = new JSMpeg.Player(url, {canvas: canvas, disableGl: true});
 }
 
 function sensors() {
@@ -198,9 +201,8 @@ $(document).ready(function() {
 	    });
 	});
 	$(document).on('click', '#camdata', function(event) {
-		player.stop();
-		const context = player.canvas.getContext('2d');
-		context.clearRect(0, 0, player.canvas.width, player.canvas.height);
+		player.destroy();
+		player = null;
 		$('#camdata').hide();
 	});
 });

@@ -175,6 +175,12 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
     """
 
 
+    def select_subprotocol(self, subprotocols):
+        logging.info("got subprotocols %s", subprotocols)
+        subprotocol = subprotocols[0] if subprotocols else None
+        return subprotocol
+
+
     def open(self):
         logging.info("new ws client %s", self)
         url = self.get_argument("url", None)
