@@ -183,6 +183,9 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
 
     def open(self):
         logging.info("new ws client %s", self)
+        if not self.get_secure_cookie("username"):
+            logging.warning("received non-aunthenticated ws connection")
+            return self.close()
         url = self.get_argument("url", None)
         if not url:
             return self.close()
