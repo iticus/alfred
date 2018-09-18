@@ -93,10 +93,6 @@ function playSound(sound) {
     });
 }
 
-function getSnapshot(source) {
-	getStream(source); //show feed for snapshot too #TODO fixme
-}
-
 function getStream(source) {
 	if (player !== null) {
 		player.destroy();
@@ -180,7 +176,6 @@ function cameras() {
 			signalById[ca['id']] = ca;
 			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
-			html += '<img src="/static/img/picture.png" id="' + ca['id'] + '" onclick="getSnapshot(this)">';
 			html += '<img src="/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
 			html += '</div>';
 		}
