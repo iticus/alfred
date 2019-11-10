@@ -13,9 +13,10 @@ import tornado.ioloop
 import tornado.web
 from tornado.gen import WaitIterator
 
-from alfred import settings, handlers
-from alfred.database import DBClient
-from alfred.utils import format_frame, control, send_push_notification
+import handlers
+import settings
+from database import DBClient
+from utils import format_frame, control, send_push_notification
 
 
 def app_exit():
@@ -72,10 +73,10 @@ def run_control(app):
                                                  functools.partial(run_control, app))
 
 
-def make_app(ioloop=None):
+def make_app(io_loop=None):
     """
     Create and return tornado.web.Application object so it can be used in tests too
-    :param ioloop: already existing ioloop (used for testing)
+    :param io_loop: already existing io_loop (used for testing)
     :returns: application instance
     """
     app = tornado.web.Application(
@@ -99,9 +100,9 @@ def make_app(ioloop=None):
         xsrf_cookies=True
     )
     app.config = settings
-    app.database = DBClient(settings.DSN, ioloop)
+    app.database = DBClient(settings.DSN, io_loop)
     app.cache = {}
-    app.ioloop = ioloop
+    app.io_loop = io_loop
     return app
 
 
@@ -111,8 +112,8 @@ def main():
     logging.info("starting alfred on %s:%s", application.config.ADDRESS, application.config.PORT)
     application.listen(application.config.PORT, address=application.config.ADDRESS)
     run_control(application)
-    if application.ioloop:
-        application.ioloop.start()
+    if application.io_loop:
+        application.io_loop.start()
     else:
         tornado.ioloop.IOLoop.instance().start()
 

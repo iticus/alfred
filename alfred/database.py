@@ -16,9 +16,9 @@ class DBClient:
     Handle database communication using momoko
     """
 
-    def __init__(self, dsn, ioloop=None):
+    def __init__(self, dsn, io_loop=None):
         self.dsn = dsn
-        self.ioloop = ioloop
+        self.io_loop = io_loop
         self.connection = None
         self.connected = False
 
@@ -27,7 +27,7 @@ class DBClient:
         """
         Initialize momoko Pool and connect to the database
         """
-        self.connection = momoko.Pool(dsn=self.dsn, ioloop=self.ioloop, raise_connect_errors=True,
+        self.connection = momoko.Pool(dsn=self.dsn, ioloop=self.io_loop, raise_connect_errors=True,
                                       cursor_factory=psycopg2.extras.RealDictCursor, size=2)
         result = yield self.connection.connect()
         logging.debug("connected to database, %s", result)

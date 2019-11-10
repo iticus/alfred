@@ -43,6 +43,8 @@ def control(app):
     now = datetime.datetime.now()
     now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
+        if not signal["active"]:
+            continue
         if signal["stype"] == "camera" or signal["stype"] == "sound":
             continue
         try:
@@ -55,7 +57,7 @@ def control(app):
         if signal["stype"] == "sensor":
             app.cache[signal["id"]] = value
             continue
-        #Handle switch value and schedule
+        # Handle switch value and schedule
         app.cache[signal["id"]] = True if value in ["1", "1,1"] else False
         if signal["attributes"].get("schedule", None):
             start_time = signal["attributes"]["schedule"]["start"]

@@ -8,16 +8,14 @@ import json
 import logging
 import tornado.web
 import tornado.websocket
-from alfred import utils
+import utils
 
 
 class BaseHandler(tornado.web.RequestHandler):
     """Base Handler to be inherited / implemented by subsequent handlers"""
 
-
     def get_current_user(self):
         return self.get_secure_cookie("username")
-
 
     def initialize(self):
         self.config = self.application.config
@@ -27,14 +25,12 @@ class BaseHandler(tornado.web.RequestHandler):
 class LoginHandler(BaseHandler):
     """Request Handler for "/login", checks login details and sets cookie"""
 
-
     def get(self):
         if self.get_secure_cookie("username"):
             return self.redirect(self.get_argument("next", "/"))
 
         error_message = self.get_argument("error", "")
         return self.render("login.html", error_message=error_message)
-
 
     @tornado.gen.coroutine
     def post(self):
@@ -48,7 +44,6 @@ class LoginHandler(BaseHandler):
 
         self.set_current_user(user)
         return self.redirect(self.get_argument("next", "/"))
-
 
     def set_current_user(self, user):
         """
@@ -64,10 +59,8 @@ class LoginHandler(BaseHandler):
 class LogoutHandler(BaseHandler):
     """Request Handler for "/logout", clears cookie"""
 
-
     def get(self):
         return self.redirect("/")
-
 
     def post(self):
         self.clear_cookie("username")
@@ -76,7 +69,6 @@ class LogoutHandler(BaseHandler):
 
 class HomeHandler(BaseHandler):
     """Request Handler for "/", render home template"""
-
 
     @tornado.web.authenticated
     def get(self):
@@ -88,7 +80,6 @@ class SensorsHandler(BaseHandler):
     Available methods: GET
     """
 
-
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
@@ -99,12 +90,10 @@ class SensorsHandler(BaseHandler):
         self.finish({"status": "OK", "sensors": sensors})
 
 
-
 class SwitchesHandler(BaseHandler):
     """Request Handler for "/switches"
     Available methods: GET, POST
     """
-
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -114,7 +103,6 @@ class SwitchesHandler(BaseHandler):
         for switch in switches:
             switch["value"] = self.application.cache.get(switch["id"], None)
         self.finish({"status": "OK", "switches": switches})
-
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -135,14 +123,12 @@ class SoundsHandler(BaseHandler):
     Available methods: GET, POST
     """
 
-
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         """Return all sound data"""
         sounds = yield self.db_client.get_sound_signals()
         self.finish({"status": "OK", "sounds": sounds})
-
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -160,7 +146,6 @@ class CamerasHandler(BaseHandler):
     Available methods: GET
     """
 
-
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
@@ -174,12 +159,10 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
     Request Handler for "/video/"
     """
 
-
     def select_subprotocol(self, subprotocols):
         logging.info("got subprotocols %s", subprotocols)
         subprotocol = subprotocols[0] if subprotocols else None
         return subprotocol
-
 
     def open(self):
         logging.info("new ws client %s", self)
@@ -191,14 +174,11 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
             return self.close()
         return self.loop(url)
 
-
     def on_close(self):
         logging.info("removing ws client %s", self)
 
-
     def on_message(self, message):
         logging.info("got ws message %s from %s", message, self)
-
 
     @tornado.gen.coroutine
     def loop(self, url):
@@ -222,7 +202,6 @@ class SubscribeHandler(BaseHandler):
     """Request Handler for "/subscribe" - handle push subscribe requests
     Available methods: POST
     """
-
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
