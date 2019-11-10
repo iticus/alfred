@@ -13,10 +13,9 @@ import tornado.ioloop
 import tornado.web
 from tornado.gen import WaitIterator
 
-import handlers
-import settings
-from database import DBClient
-from utils import format_frame, control, send_push_notification
+from alfred import settings, handlers
+from alfred.database import DBClient
+from alfred.utils import format_frame, control, send_push_notification
 
 
 def app_exit():

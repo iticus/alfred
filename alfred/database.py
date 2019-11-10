@@ -11,18 +11,16 @@ import psycopg2
 from tornado.gen import coroutine
 
 
-class DBClient():
+class DBClient:
     """
     Handle database communication using momoko
     """
-
 
     def __init__(self, dsn, ioloop=None):
         self.dsn = dsn
         self.ioloop = ioloop
         self.connection = None
         self.connected = False
-
 
     @coroutine
     def connect(self):
@@ -34,7 +32,6 @@ class DBClient():
         result = yield self.connection.connect()
         logging.debug("connected to database, %s", result)
         self.connected = True
-
 
     @coroutine
     def raw_query(self, query, params=None):
@@ -60,7 +57,6 @@ class DBClient():
 
         return []
 
-
     @coroutine
     def get_user(self, username):
         """
@@ -74,7 +70,6 @@ class DBClient():
         if not users:
             return []
         return users[0]
-
 
     @coroutine
     def add_subscription(self, subscription):
@@ -90,7 +85,6 @@ class DBClient():
         result = yield self.raw_query(query, data)
         return result
 
-
     @coroutine
     def get_subscriptions(self):
         """
@@ -101,7 +95,6 @@ class DBClient():
         subscriptions = yield self.raw_query(query)
         return subscriptions
 
-
     @coroutine
     def get_signals(self, stype=None):
         """
@@ -109,7 +102,7 @@ class DBClient():
         :param stype: signal type (sensor, switch, camera)
         :return: list of signal
         """
-        query = "SELECT id,name,stype,url,attributes FROM signals"
+        query = "SELECT id,name,stype,url,active,attributes FROM signals"
         data = []
         if stype:
             query += " WHERE stype=%s ORDER BY name"
@@ -118,7 +111,6 @@ class DBClient():
         if not signals:
             return []
         return signals
-
 
     @coroutine
     def get_sensor_signals(self):
@@ -129,7 +121,6 @@ class DBClient():
         sensors = yield self.get_signals("sensor")
         return sensors
 
-
     @coroutine
     def get_switch_signals(self):
         """
@@ -139,7 +130,6 @@ class DBClient():
         switches = yield self.get_signals("switch")
         return switches
 
-
     @coroutine
     def get_sound_signals(self):
         """
@@ -148,7 +138,6 @@ class DBClient():
         """
         sounds = yield self.get_signals("sound")
         return sounds
-
 
     @coroutine
     def get_camera_signals(self):

@@ -8,7 +8,7 @@ import getpass
 import tornado
 
 import alfred
-import utils
+from alfred import utils
 
 
 @tornado.gen.coroutine

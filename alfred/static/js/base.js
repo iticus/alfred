@@ -160,7 +160,7 @@ function sounds() {
 			signalById[so['id']] = so;
 			html += '<div class="signal">';
 			html += '<span id="' + so['id'] + '">' + so['name'] + '</span>';
-			html += '<img src="/static/img/speaker.png" id="' + so['id'] + '" onclick="playSound(this)">';
+			html += '<img src="/alfred/static/static/img/speaker.png" id="' + so['id'] + '" onclick="playSound(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);
@@ -176,7 +176,7 @@ function cameras() {
 			signalById[ca['id']] = ca;
 			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
-			html += '<img src="/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
+			html += '<img src="/alfred/static/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);

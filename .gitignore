@@ -1,6 +1,7 @@
 *.log
 *.pyc
-settings.py
+alfred/settings.py
 __pycache__/
 .project
 .pydevproject
+.idea/*

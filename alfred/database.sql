@@ -16,11 +16,10 @@ CREATE TABLE signals (
       name text NOT NULL,
       stype text NOT NULL,
       url text NOT NULL,
+      active smallint NOT NULL,
       attributes jsonb
 );
-/*
-stypes: sensor, switch, camera
-/*
+--stypes: sensor, switch, camera
 
 --subscriptions
 CREATE TABLE subscriptions (

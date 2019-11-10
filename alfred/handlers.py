@@ -8,7 +8,7 @@ import json
 import logging
 import tornado.web
 import tornado.websocket
-import utils
+from alfred import utils
 
 
 class BaseHandler(tornado.web.RequestHandler):
