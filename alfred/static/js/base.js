@@ -115,9 +115,9 @@ function sensors() {
 		for (var i=0;i<data['sensors'].length;i++) {
 			var se = data['sensors'][i];
 			signalById[se['id']] = se;
-			html += '<div class="signal">'
+			html += '<div class="signal">';
 			html += '<span id="' + se['id'] + '">' + se['name'] + '</span>';
-			html +='<span class="sensor">'
+			html +='<span class="sensor">';
 			if (se['value'].indexOf(',') > -1) {
 				var parts = se['value'].split(',');
 				html += parts[0] + '&#176;C, ' + parts[1] + '% rH';
@@ -138,7 +138,7 @@ function switches() {
 		for (var i=0;i<data['switches'].length;i++) {
 			var sw = data['switches'][i];
 			signalById[sw['id']] = sw;
-			html += '<div class="signal">'
+			html += '<div class="signal">';
 			html += '<span id="' + sw['id'] + '">' + sw['name'] + '</span>';
 			html += '<label class="switch"><input type="checkbox" id="' + sw['id'] + '"';
 			if (sw['value'] === true) {
@@ -160,7 +160,7 @@ function sounds() {
 			signalById[so['id']] = so;
 			html += '<div class="signal">';
 			html += '<span id="' + so['id'] + '">' + so['name'] + '</span>';
-			html += '<img src="/alfred/static/static/img/speaker.png" id="' + so['id'] + '" onclick="playSound(this)">';
+			html += '<img src="/static/img/speaker.png" id="' + so['id'] + '" onclick="playSound(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);
@@ -176,7 +176,7 @@ function cameras() {
 			signalById[ca['id']] = ca;
 			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
-			html += '<img src="/alfred/static/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
+			html += '<img src="/static/img/video.png" id="' + ca['id'] + '" onclick="getStream(this)">';
 			html += '</div>';
 		}
 		$('#content').html(html);
