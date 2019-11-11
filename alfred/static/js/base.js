@@ -144,8 +144,14 @@ function switches() {
 			if (sw['value'] === true) {
 				html += ' checked';
 			}
-			html +='><span class="slider round"></span></label>';
-			html += '</div>';
+			if (sw['active'] !== 1) {
+				html += ' disabled';
+			}
+			html += '><span class="slider round';
+			if (sw['active'] !== 1) {
+				html += ' disabled';
+			}
+			html += '"></span></label></div>';
 		}
 		$('#content').html(html);
 	});
