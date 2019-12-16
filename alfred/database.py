@@ -96,17 +96,22 @@ class DBClient:
         return subscriptions
 
     @coroutine
-    def get_signals(self, stype=None):
+    def get_signals(self, stype=None, signal_id=None):
         """
         Return all signals onf stype or all signals if None
         :param stype: signal type (sensor, switch, camera)
+        :param signal_id: signal ID for this type
         :return: list of signal
         """
         query = "SELECT id,name,stype,url,active,attributes FROM signals"
         data = []
         if stype:
-            query += " WHERE stype=%s ORDER BY name"
+            query += " WHERE stype=%s"
             data.append(stype)
+            if signal_id:
+                query += " AND id=%s"
+                data.append(signal_id)
+        query += " ORDER BY name"
         signals = yield self.raw_query(query, data)
         if not signals:
             return []
@@ -122,12 +127,13 @@ class DBClient:
         return sensors
 
     @coroutine
-    def get_switch_signals(self):
+    def get_switch_signals(self, signal_id=None):
         """
         Get switch signal data
+        :param signal_id: signal ID
         :returns: list of switch signals
         """
-        switches = yield self.get_signals("switch")
+        switches = yield self.get_signals("switch", signal_id)
         return switches
 
     @coroutine

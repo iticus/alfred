@@ -6,6 +6,7 @@ Created on Dec 18, 2017
 
 import binascii
 import datetime
+import json
 import logging
 import os
 import time
@@ -48,12 +49,19 @@ def control(app):
         if signal["stype"] == "camera" or signal["stype"] == "sound":
             continue
         try:
-            response = yield client.fetch(signal["url"])
+            if signal["attributes"].get("type", "") == "android":
+                url = signal["url"] + "/status.json?show_avail=1"
+                response = yield client.fetch(url)
+                aux = json.loads(response.body.decode())
+                value = "1" if aux.get("curvals", {}).get("torch", "") == "on" else "0"
+            else:
+                response = yield client.fetch(signal["url"])
+                value = response.body.decode()
         except Exception as exc:
             error_msg += "cannot retrieve signal data for %s: %s" % (signal["name"], exc)
             logging.error(error_msg)
             continue
-        value = response.body.decode()
+
         if signal["stype"] == "sensor":
             app.cache[signal["id"]] = value
             continue
@@ -66,37 +74,48 @@ def control(app):
             stop_time = time_to_minutes(stop_time)
             if start_time <= stop_time:
                 if start_time <= now_minutes < stop_time and not app.cache[signal["id"]]:
-                    control_switch(signal["url"], "1")
+                    control_switch(signal, "1")
                     app.cache[signal["id"]] = True
                 elif not (start_time <= now_minutes < stop_time) and app.cache[signal["id"]]:
-                    control_switch(signal["url"], "0")
+                    control_switch(signal, "0")
                     app.cache[signal["id"]] = False
             else:
                 if stop_time <= now_minutes < start_time and app.cache[signal["id"]]:
-                    control_switch(signal["url"], "0")
+                    control_switch(signal, "0")
                     app.cache[signal["id"]] = False
                 elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
-                    control_switch(signal["url"], "1")
+                    control_switch(signal, "1")
                     app.cache[signal["id"]] = True
     if error_msg:
         raise Exception(error_msg)
 
 
 @coroutine
-def control_switch(url, state):
+def control_switch(signal, state):
     """
     Turn switch on or off
-    :param url: switch URL to make the POST request to
+    :param signal: signal to make handle
     :param state: desired state ("0" or "1")
     :return: decoded response body from POST request
     """
-    logging.info("changing state for URL %s, value: %s", url, state)
-    if state == "1":
-        url += "/turn_on"
+    method = "POST"
+    body = "{}"
+    url = signal["url"]
+    if signal["attributes"].get("type") == "android":
+        method = "GET"
+        body = None
+        if state == "1":
+            url += "/enabletorch"
+        else:
+            url += "/disabletorch"
     else:
-        url += "/turn_off"
+        if state == "1":
+            url += "/turn_on"
+        else:
+            url += "/turn_off"
     client = AsyncHTTPClient()
-    response = yield client.fetch(url, method="POST", body="{}")
+    logging.info("changing state for URL %s, value: %s", url, state)
+    response = yield client.fetch(url, method=method, body=body)
     return response.body.decode()
 
 

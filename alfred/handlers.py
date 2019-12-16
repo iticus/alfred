@@ -109,10 +109,11 @@ class SwitchesHandler(BaseHandler):
     def post(self):
         """Toggle switch"""
         sid = int(self.get_argument("sid"))
-        url = self.get_argument("url")
+        signals = yield self.db_client.get_switch_signals(sid)
+        signal = signals[0]
         state = self.get_argument("state")
-        response = yield utils.control_switch(url, state)
-        if response != "OK":
+        response = yield utils.control_switch(signal, state)
+        if "ok" not in response.lower():
             return self.finish({"status": "error"})
         self.application.cache[sid] = True if state == "1" else False
         return self.finish({"status": "OK"})
