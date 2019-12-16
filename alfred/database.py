@@ -146,10 +146,11 @@ class DBClient:
         return sounds
 
     @coroutine
-    def get_camera_signals(self):
+    def get_camera_signals(self, signal_id=None):
         """
         Get camera signal data
+        :param signal_id: signal ID
         :returns: list of camera signals
         """
-        cameras = yield self.get_signals("camera")
+        cameras = yield self.get_signals("camera", signal_id)
         return cameras

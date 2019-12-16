@@ -5,10 +5,15 @@ var alreadySubscribed = false;
 
 var signalById = {};
 var player = null;
+var socket = null;
 
 function getCookie(name) {
     var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
     return r ? r[1] : undefined;
+}
+
+function ws_proto() {
+	return location.protocol.match(/^https/) ? "wss://" : "ws://";
 }
 
 function urlB64ToUint8Array(base64String) {
@@ -102,10 +107,42 @@ function getStream(source) {
 	var canvas = document.getElementById('camdata');
 	var ctx = canvas.getContext('2d');
 	ctx.fillStyle = '#444';
-	ctx.fillText('Loading...', canvas.width/2-30, canvas.height/3);
-	// Setup the WebSocket connection and start the player
-	var url = 'wss://' + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"];
-	player = new JSMpeg.Player(url, {canvas: canvas, disableGl: true});
+	ctx.fillText('Loading...', canvas.width / 2 - 30, canvas.height / 3);
+	if (signal["attributes"].hasOwnProperty("type") && signal["attributes"]["type"] == "android") {
+		socket = new WebSocket(ws_proto() + window.location.hostname + ':' + window.location.port + '/mjpeg?url=' + signal["url"]);
+		socket.binaryType = 'arraybuffer';
+		socket.onopen = function () {
+			socket.send('?');
+		};
+		socket.onmessage = function (msg) {
+			var blob  = new Blob([msg.data], {type: "image/jpeg"});
+			var img = new Image();
+			img.onload = function (e) {
+				ctx.drawImage(img, 0, 0);
+				window.URL.revokeObjectURL(img.src);
+				if (canvas.width !== img.width) {
+					canvas.width = img.width;
+				}
+				if (canvas.height !== img.height) {
+					canvas.height = img.height;
+				}
+				img = null;
+			};
+			img.onerror = img.onabort = function () {
+				img = null;
+				socket.close();
+			};
+			img.src = window.URL.createObjectURL(blob);
+			socket.send('?');
+		};
+	}
+	else {
+		// Setup the WebSocket connection and start the player
+		var url = ws_proto() + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"];
+		player = new JSMpeg.Player(url, {canvas: canvas, disableGl: true});
+	}
+	if (1 === 1) {
+	}
 }
 
 function sensors() {
@@ -202,8 +239,16 @@ $(document).ready(function() {
 	    });
 	});
 	$(document).on('click', '#camdata', function(event) {
-		player.destroy();
-		player = null;
+		if (player !== null) {
+			player.source.socket.close();
+			player.source.destroy();
+			player.destroy();
+			player = null;
+		}
+		if (socket !== null) {
+			socket.close();
+			socket = null;
+		}
 		$('#camdata').hide();
 	});
 });

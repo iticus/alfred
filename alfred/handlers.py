@@ -6,12 +6,17 @@ Created on Dec 17, 2017
 
 import json
 import logging
-import tornado.web
-import tornado.websocket
+from tornado.escape import url_escape, json_encode
+from tornado.gen import coroutine
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httputil import parse_response_start_line
+from tornado.web import authenticated, RequestHandler
+from tornado.websocket import websocket_connect, WebSocketHandler, WebSocketClosedError
+
 import utils
 
 
-class BaseHandler(tornado.web.RequestHandler):
+class BaseHandler(RequestHandler):
     """Base Handler to be inherited / implemented by subsequent handlers"""
 
     def get_current_user(self):
@@ -32,14 +37,14 @@ class LoginHandler(BaseHandler):
         error_message = self.get_argument("error", "")
         return self.render("login.html", error_message=error_message)
 
-    @tornado.gen.coroutine
+    @coroutine
     def post(self):
         username = self.get_argument("username", "")
         password = self.get_argument("password", "")
         user = yield self.db_client.get_user(username)
         if not user or not utils.compare_pwhashes(user["password"],
                                                   password, self.config.PW_ITERATIONS):
-            error_msg = "?error=" + tornado.escape.url_escape("login incorrect")
+            error_msg = "?error=" + url_escape("login incorrect")
             return self.redirect("/login/" + error_msg)
 
         self.set_current_user(user)
@@ -51,7 +56,7 @@ class LoginHandler(BaseHandler):
         :param user: user data
         """
         if user:
-            self.set_secure_cookie("username", tornado.escape.json_encode(user["username"]))
+            self.set_secure_cookie("username", json_encode(user["username"]))
         else:
             self.clear_cookie("username")
 
@@ -70,7 +75,7 @@ class LogoutHandler(BaseHandler):
 class HomeHandler(BaseHandler):
     """Request Handler for "/", render home template"""
 
-    @tornado.web.authenticated
+    @authenticated
     def get(self):
         self.render("home.html", vapid_public_key=self.config.VAPID_PUBLIC_KEY)
 
@@ -80,8 +85,8 @@ class SensorsHandler(BaseHandler):
     Available methods: GET
     """
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def get(self):
         """Return all switches data"""
         sensors = yield self.db_client.get_sensor_signals()
@@ -95,8 +100,8 @@ class SwitchesHandler(BaseHandler):
     Available methods: GET, POST
     """
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def get(self):
         """Return all switches data"""
         switches = yield self.db_client.get_switch_signals()
@@ -104,8 +109,8 @@ class SwitchesHandler(BaseHandler):
             switch["value"] = self.application.cache.get(switch["id"], None)
         self.finish({"status": "OK", "switches": switches})
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def post(self):
         """Toggle switch"""
         sid = int(self.get_argument("sid"))
@@ -124,15 +129,15 @@ class SoundsHandler(BaseHandler):
     Available methods: GET, POST
     """
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def get(self):
         """Return all sound data"""
         sounds = yield self.db_client.get_sound_signals()
         self.finish({"status": "OK", "sounds": sounds})
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def post(self):
         """Play sound"""
         url = self.get_argument("url")
@@ -147,15 +152,49 @@ class CamerasHandler(BaseHandler):
     Available methods: GET
     """
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def get(self):
         """Return all available cameras"""
         cameras = yield self.db_client.get_camera_signals()
         return self.finish({"status": "OK", "cameras": cameras})
 
 
-class VideoHandler(tornado.websocket.WebSocketHandler):
+class MJPEGHandler(WebSocketHandler):
+    """
+    Request Handler for "/mjpeg/"
+    """
+
+    def open(self):
+        logging.info("new ws mjpeg client %s", self)
+        if not self.get_secure_cookie("username"):
+            logging.warning("received non-aunthenticated ws connection")
+            return self.close()
+        self.url = self.get_argument("url", None)
+        if not self.url:
+            return self.close()
+        self.client = AsyncHTTPClient()
+
+    def on_close(self):
+        logging.info("removing ws mjpeg client %s", self)
+
+    def on_message(self, message):
+        logging.info("got ws message %s from %s", message, self)
+
+    @coroutine
+    def on_message(self, message):
+        try:
+            if message == "?":
+                image = yield self.client.fetch(self.url)
+                self.write_message(image.body, binary=True)
+            else:
+                self.write_message(message)  # echo
+        except Exception as exc:
+            logging.error("cannot handle mjpeg data %s", exc)
+            self.close()
+
+
+class VideoHandler(WebSocketHandler):
     """
     Request Handler for "/video/"
     """
@@ -181,20 +220,20 @@ class VideoHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         logging.info("got ws message %s from %s", message, self)
 
-    @tornado.gen.coroutine
+    @coroutine
     def loop(self, url):
         """
         Open a new websocket connection and relay data to client
         :param url: target websocket connection
         """
-        conn = yield tornado.websocket.websocket_connect(url)
+        conn = yield websocket_connect(url)
         while True:
             message = yield conn.read_message()
             if not message:
                 break
             try:
                 self.write_message(message, binary=True)
-            except tornado.websocket.WebSocketClosedError:
+            except WebSocketClosedError:
                 break
         conn.close()
 
@@ -204,8 +243,8 @@ class SubscribeHandler(BaseHandler):
     Available methods: POST
     """
 
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
+    @authenticated
+    @coroutine
     def post(self):
         """Add new subscription info"""
         subscription = json.loads(self.request.body.decode())

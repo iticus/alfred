@@ -89,6 +89,7 @@ def make_app(io_loop=None):
             (r"/sounds/?", handlers.SoundsHandler),
             (r"/cameras/?", handlers.CamerasHandler),
             (r"/video/?", handlers.VideoHandler),
+            (r"/mjpeg/?", handlers.MJPEGHandler),
             (r"/subscribe/?", handlers.SubscribeHandler),
             (r"/(manifest\.json)", tornado.web.StaticFileHandler, {"path": "static"}),
             (r"/(service\-worker\.js)", tornado.web.StaticFileHandler, {"path": "static"}),
