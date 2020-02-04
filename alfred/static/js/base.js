@@ -103,13 +103,18 @@ function getStream(source) {
 		player.destroy();
 	}
 	signal = signalById[source.id];
-	$('#camdata').show();
 	var canvas = document.getElementById('camdata');
 	var ctx = canvas.getContext('2d');
 	ctx.fillStyle = '#444';
 	ctx.fillText('Loading...', canvas.width / 2 - 30, canvas.height / 3);
-	if (signal["attributes"].hasOwnProperty("type") && signal["attributes"]["type"] == "android") {
-		socket = new WebSocket(ws_proto() + window.location.hostname + ':' + window.location.port + '/mjpeg?url=' + signal["url"]);
+	$('#camdata').show();
+	if (signal["attributes"].hasOwnProperty("type") && signal["attributes"]["type"] == "image") {
+		let upstream_proto = "http";
+		if (signal["attributes"].hasOwnProperty("proto")) {
+			upstream_proto = signal["attributes"]["proto"];
+		}
+		let url = '/' + upstream_proto + '_video?url=' + signal["url"];
+		socket = new WebSocket(ws_proto() + window.location.hostname + ':' + window.location.port + url);
 		socket.binaryType = 'arraybuffer';
 		socket.onopen = function () {
 			socket.send('?');
@@ -138,10 +143,8 @@ function getStream(source) {
 	}
 	else {
 		// Setup the WebSocket connection and start the player
-		var url = ws_proto() + window.location.hostname + ':' + window.location.port + '/video?url=' + signal["url"];
+		var url = ws_proto() + window.location.hostname + ':' + window.location.port + '/ws_video?url=' + signal["url"];
 		player = new JSMpeg.Player(url, {canvas: canvas, disableGl: true});
-	}
-	if (1 === 1) {
 	}
 }
 
@@ -239,6 +242,8 @@ $(document).ready(function() {
 	    });
 	});
 	$(document).on('click', '#camdata', function(event) {
+		var canvas = document.getElementById('camdata');
+		canvas.width = canvas.width;
 		if (player !== null) {
 			player.source.socket.close();
 			player.source.destroy();

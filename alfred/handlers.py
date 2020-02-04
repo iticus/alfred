@@ -160,13 +160,13 @@ class CamerasHandler(BaseHandler):
         return self.finish({"status": "OK", "cameras": cameras})
 
 
-class MJPEGHandler(WebSocketHandler):
+class VideoHTTPHandler(WebSocketHandler):
     """
-    Request Handler for "/mjpeg/"
+    Request Handler for "/http_video/"
     """
 
     def open(self):
-        logging.info("new ws mjpeg client %s", self)
+        logging.info("new ws http_video client %s", self)
         if not self.get_secure_cookie("username"):
             logging.warning("received non-aunthenticated ws connection")
             return self.close()
@@ -176,7 +176,7 @@ class MJPEGHandler(WebSocketHandler):
         self.client = AsyncHTTPClient()
 
     def on_close(self):
-        logging.info("removing ws mjpeg client %s", self)
+        logging.info("removing ws http_video client %s", self)
 
     def on_message(self, message):
         logging.info("got ws message %s from %s", message, self)
@@ -194,9 +194,9 @@ class MJPEGHandler(WebSocketHandler):
             self.close()
 
 
-class VideoHandler(WebSocketHandler):
+class VideoWSHandler(WebSocketHandler):
     """
-    Request Handler for "/video/"
+    Request Handler for "/ws_video/"
     """
 
     def select_subprotocol(self, subprotocols):
@@ -205,7 +205,7 @@ class VideoHandler(WebSocketHandler):
         return subprotocol
 
     def open(self):
-        logging.info("new ws client %s", self)
+        logging.info("new ws_video client %s", self)
         if not self.get_secure_cookie("username"):
             logging.warning("received non-aunthenticated ws connection")
             return self.close()
@@ -215,7 +215,7 @@ class VideoHandler(WebSocketHandler):
         return self.loop(url)
 
     def on_close(self):
-        logging.info("removing ws client %s", self)
+        logging.info("removing ws_video client %s", self)
 
     def on_message(self, message):
         logging.info("got ws message %s from %s", message, self)
