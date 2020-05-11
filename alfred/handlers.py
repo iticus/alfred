@@ -8,8 +8,7 @@ import json
 import logging
 from tornado.escape import url_escape, json_encode
 from tornado.gen import coroutine
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.httputil import parse_response_start_line
+from tornado.httpclient import AsyncHTTPClient
 from tornado.web import authenticated, RequestHandler
 from tornado.websocket import websocket_connect, WebSocketHandler, WebSocketClosedError
 
@@ -178,15 +177,15 @@ class VideoHTTPHandler(WebSocketHandler):
     def on_close(self):
         logging.info("removing ws http_video client %s", self)
 
-    def on_message(self, message):
-        logging.info("got ws message %s from %s", message, self)
-
     @coroutine
     def on_message(self, message):
         try:
             if message == "?":
                 image = yield self.client.fetch(self.url)
                 self.write_message(image.body, binary=True)
+            elif message == "!":
+                logging.info("closing websocket by client request")
+                self.close()
             else:
                 self.write_message(message)  # echo
         except Exception as exc:
@@ -204,6 +203,7 @@ class VideoWSHandler(WebSocketHandler):
         subprotocol = subprotocols[0] if subprotocols else None
         return subprotocol
 
+    @coroutine
     def open(self):
         logging.info("new ws_video client %s", self)
         if not self.get_secure_cookie("username"):
@@ -212,30 +212,24 @@ class VideoWSHandler(WebSocketHandler):
         url = self.get_argument("url", None)
         if not url:
             return self.close()
-        return self.loop(url)
+        self.upstream = yield websocket_connect(url, on_message_callback=self.upstream_message)
 
     def on_close(self):
+        self.upstream.close()
         logging.info("removing ws_video client %s", self)
 
     def on_message(self, message):
-        logging.info("got ws message %s from %s", message, self)
+        if message == "!":
+            logging.info("closing websocket by client request")
+            self.close()
+        elif message != "?":
+            logging.info("got ws message %s from %s", message, self)
 
-    @coroutine
-    def loop(self, url):
-        """
-        Open a new websocket connection and relay data to client
-        :param url: target websocket connection
-        """
-        conn = yield websocket_connect(url)
-        while True:
-            message = yield conn.read_message()
-            if not message:
-                break
-            try:
-                self.write_message(message, binary=True)
-            except WebSocketClosedError:
-                break
-        conn.close()
+    def upstream_message(self, message):
+        try:
+            self.write_message(message, binary=True)
+        except WebSocketClosedError:
+            self.close()
 
 
 class SubscribeHandler(BaseHandler):

@@ -1,14 +1,15 @@
-var endpoint;
-var key;
-var authSecret;
-var alreadySubscribed = false; 
+let endpoint;
+let key;
+let authSecret;
+let alreadySubscribed = false;
 
-var signalById = {};
-var player = null;
-var socket = null;
+let signalById = {};
+let streamActive = false;
+let player = null;
+let socket = null;
 
 function getCookie(name) {
-    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+    let r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
     return r ? r[1] : undefined;
 }
 
@@ -45,10 +46,11 @@ navigator.serviceWorker.register('/service-worker.js')
   if (alreadySubscribed) {
 	  return
   }
-  var rawKey = subscription.getKey ? subscription.getKey('p256dh') : '';
+
+  let rawKey = subscription.getKey ? subscription.getKey('p256dh') : '';
   key = rawKey ?
         btoa(String.fromCharCode.apply(null, new Uint8Array(rawKey))) : '';
-  var rawAuthSecret = subscription.getKey ? subscription.getKey('auth') : '';
+  let rawAuthSecret = subscription.getKey ? subscription.getKey('auth') : '';
   authSecret = rawAuthSecret ? btoa(String.fromCharCode.apply(null, new Uint8Array(rawAuthSecret))) : '';
   endpoint = subscription.endpoint;
   
@@ -68,7 +70,7 @@ navigator.serviceWorker.register('/service-worker.js')
 });
 
 function topNav() {
-    var x = document.getElementById("topNav");
+    let x = document.getElementById("topNav");
     if (x.className === "topnav") {
         x.className += " responsive";
     } else {
@@ -89,8 +91,8 @@ function handleActiveMenu(text) {
 }
 
 function playSound(sound) {
-	var signal = signalById[sound.id];
-	var data = {"url": signal["url"], "_xsrf": getCookie("_xsrf")};
+	let signal = signalById[sound.id];
+	let data = {"url": signal["url"], "_xsrf": getCookie("_xsrf")};
 	$('#speaker').show();
     $.post('/sounds', data).done(function (msg) {$('#speaker').hide();}).fail(function () {
     	alert('cannot play sound');
@@ -101,10 +103,15 @@ function playSound(sound) {
 function getStream(source) {
 	if (player !== null) {
 		player.destroy();
+		player = null;
 	}
-	signal = signalById[source.id];
-	var canvas = document.getElementById('camdata');
-	var ctx = canvas.getContext('2d');
+	if (socket !== null) {
+		socket.close();
+		socket = null;
+	}
+	let signal = signalById[source.id];
+	let canvas = document.getElementById('camdata');
+	let ctx = canvas.getContext('2d');
 	ctx.fillStyle = '#444';
 	ctx.fillText('Loading...', canvas.width / 2 - 30, canvas.height / 3);
 	$('#camdata').show();
@@ -117,11 +124,20 @@ function getStream(source) {
 		socket = new WebSocket(ws_proto() + window.location.hostname + ':' + window.location.port + url);
 		socket.binaryType = 'arraybuffer';
 		socket.onopen = function () {
+			streamActive = true;
 			socket.send('?');
 		};
+		socket.onclose = () => {
+            console.log('websocket connection closed by server');
+        };
 		socket.onmessage = function (msg) {
-			var blob  = new Blob([msg.data], {type: "image/jpeg"});
-			var img = new Image();
+			if (msg.length === 0) {
+				return setTimeout(function() {
+					socket.send('?');
+				}, 100);
+			}
+			let blob  = new Blob([msg.data], {type: "image/jpeg"});
+			let img = new Image();
 			img.onload = function (e) {
 				ctx.drawImage(img, 0, 0);
 				window.URL.revokeObjectURL(img.src);
@@ -138,12 +154,16 @@ function getStream(source) {
 				socket.close();
 			};
 			img.src = window.URL.createObjectURL(blob);
+			if (streamActive === false) {
+				socket.send("!");
+				return;
+			}
 			socket.send('?');
 		};
 	}
 	else {
 		// Setup the WebSocket connection and start the player
-		var url = ws_proto() + window.location.hostname + ':' + window.location.port + '/ws_video?url=' + signal["url"];
+		let url = ws_proto() + window.location.hostname + ':' + window.location.port + '/ws_video?url=' + signal["url"];
 		player = new JSMpeg.Player(url, {canvas: canvas, disableGl: true});
 	}
 }
@@ -151,15 +171,15 @@ function getStream(source) {
 function sensors() {
 	$.get('/sensors', function (data) {
 		handleActiveMenu('sensors');
-		var html = "";
-		for (var i=0;i<data['sensors'].length;i++) {
-			var se = data['sensors'][i];
+		let html = "";
+		for (let i=0;i<data['sensors'].length;i++) {
+			let se = data['sensors'][i];
 			signalById[se['id']] = se;
 			html += '<div class="signal">';
 			html += '<span id="' + se['id'] + '">' + se['name'] + '</span>';
 			html +='<span class="sensor">';
 			if (se['value'].indexOf(',') > -1) {
-				var parts = se['value'].split(',');
+				let parts = se['value'].split(',');
 				html += parts[0] + '&#176;C, ' + parts[1] + '% rH';
 			}
 			else {
@@ -174,9 +194,9 @@ function sensors() {
 function switches() {
 	$.get('/switches', function (data) {
 		handleActiveMenu('switches');
-		var html = "";
-		for (var i=0;i<data['switches'].length;i++) {
-			var sw = data['switches'][i];
+		let html = "";
+		for (let i=0;i<data['switches'].length;i++) {
+			let sw = data['switches'][i];
 			signalById[sw['id']] = sw;
 			html += '<div class="signal">';
 			html += '<span id="' + sw['id'] + '">' + sw['name'] + '</span>';
@@ -200,9 +220,9 @@ function switches() {
 function sounds() {
 	$.get('/sounds', function (data) {
 		handleActiveMenu('sounds');
-		var html = "";
-		for (var i=0;i<data['sounds'].length;i++) {
-			var so = data['sounds'][i];
+		let html = "";
+		for (let i=0;i<data['sounds'].length;i++) {
+			let so = data['sounds'][i];
 			signalById[so['id']] = so;
 			html += '<div class="signal">';
 			html += '<span id="' + so['id'] + '">' + so['name'] + '</span>';
@@ -216,9 +236,9 @@ function sounds() {
 function cameras() {
 	$.get('/cameras', function (data) {
 		handleActiveMenu('cameras');
-		var html = "";
-		for (var i=0;i<data['cameras'].length;i++) {
-			var ca = data['cameras'][i];
+		let html = "";
+		for (let i=0;i<data['cameras'].length;i++) {
+			let ca = data['cameras'][i];
 			signalById[ca['id']] = ca;
 			html += '<div class="signal">';
 			html += '<span id="' + ca['id'] + '">' + ca['name'] + '</span>';
@@ -232,7 +252,7 @@ function cameras() {
 $(document).ready(function() {
 	$(document).on('click', 'input:checkbox', function(event) {
 	    // this will contain a reference to the checkbox
-		data = {'sid': this.id, 'url': signalById[this.id]['url'], 'state': 0};
+		let data = {'sid': this.id, 'url': signalById[this.id]['url'], 'state': 0};
 		data['_xsrf'] = getCookie("_xsrf");
 	    if (this.checked) {
 	        data['state'] = 1;
@@ -242,7 +262,8 @@ $(document).ready(function() {
 	    });
 	});
 	$(document).on('click', '#camdata', function(event) {
-		var canvas = document.getElementById('camdata');
+		streamActive = false;
+		let canvas = document.getElementById('camdata');
 		canvas.width = canvas.width;
 		if (player !== null) {
 			player.source.socket.close();
