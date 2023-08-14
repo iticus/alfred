@@ -1,4 +1,4 @@
-tornado==6.3.2
+tornado==6.3.3
 momoko
 pywebpush
 py-vapid
