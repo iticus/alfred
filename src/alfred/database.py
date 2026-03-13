@@ -5,10 +5,11 @@ Created on Dec 17, 2017
 """
 
 import datetime
+import json
 import logging
-import momoko
-import psycopg2
-from tornado.gen import coroutine
+import asyncpg
+
+logger = logging.getLogger(__name__)
 
 
 class DBClient:
@@ -16,87 +17,74 @@ class DBClient:
     Handle database communication using momoko
     """
 
-    def __init__(self, dsn, io_loop=None):
+    def __init__(self, dsn):
         self.dsn = dsn
-        self.io_loop = io_loop
-        self.connection = None
-        self.connected = False
 
-    @coroutine
-    def connect(self):
+    async def connect(self) -> None:
         """
-        Initialize momoko Pool and connect to the database
+        Initialize asyncpg Pool and connect to the database
         """
-        self.connection = momoko.Pool(dsn=self.dsn, ioloop=self.io_loop, raise_connect_errors=True,
-                                      cursor_factory=psycopg2.extras.RealDictCursor, size=2)
-        result = yield self.connection.connect()
-        logging.debug("connected to database, %s", result)
-        self.connected = True
 
-    @coroutine
-    def raw_query(self, query, params=None):
+        async def init_connection(conn: asyncpg.Connection) -> None:
+            await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+            # await conn.set_type_codec("geometry", encoder=encode_geometry,decoder=decode_geometry, format="binary")
+
+        self.pool = await asyncpg.create_pool(dsn=self.dsn, min_size=2, max_size=8, init=init_connection)
+        logger.info("successfully connected to database")
+
+    async def disconnect(self) -> None:
         """
-        Run query with specified parameters and return results if any
-        :param query: SQL query text
-        :param params: tuple containing parameters
-        :returns database objects or True/False for success/failure
+        Disconnect from PG and close pool
         """
-        if not self.connected:
-            yield self.connect()
+        assert self.pool is not None
+        await self.pool.close()
+        logger.info("successfully disconnected from database")
 
-        try:
-            cursor = yield self.connection.execute(query, params)
-        except psycopg2.Error as exc:
-            logging.error("cannot execute query %s: %s", query, exc)
-            return False
-
-        if cursor.rowcount > 0:
-            result = cursor.fetchall()
-            logging.debug("got %d results", len(result))
-            return result
-
-        return []
-
-    @coroutine
-    def get_user(self, username):
+    async def get_user(self, username) -> dict | None:
         """
         Return first user matching username
         :param username: data to match the username against
         :return user
         """
-        query = "SELECT id,name,username,password FROM users WHERE username=%s"
-        data = (username, )
-        users = yield self.raw_query(query, data)
-        if not users:
-            return []
-        return users[0]
+        query = "SELECT id,name,username,password FROM users WHERE username=$1 LIMIT 1"
+        users = await self.pool.fetch(query, username)
+        return dict(users[0]) if users else None
 
-    @coroutine
-    def add_subscription(self, subscription):
+    async def add_subscription(self, subscription):
         """
         Add new subscription object
         :param subscription: subscription info from browser
         :return subscription ID
         """
         query = """INSERT INTO subscriptions(added_timestamp,endpoint,key,auth_secret)
-        VALUES(%s,%s,%s,%s) RETURNING id"""
-        data = (datetime.datetime.utcnow(), subscription["endpoint"], subscription["key"],
-                subscription["authSecret"])
-        result = yield self.raw_query(query, data)
+        VALUES($1,$2,$3,$4) RETURNING id"""
+        conn = await self.pool.acquire()
+        try:
+            result = await conn.fetch(
+                query,
+                datetime.datetime.now(tz=datetime.UTC),
+                subscription["endpoint"],
+                subscription["key"],
+                subscription["authSecret"]
+            )
+        finally:
+            await self.pool.release(conn)
         return result
 
-    @coroutine
-    def get_subscriptions(self):
+    async def get_subscriptions(self):
         """
         Return all subscription objects
         :return subscriptions list
         """
         query = "SELECT id,added_timestamp,endpoint,key,auth_secret FROM subscriptions"
-        subscriptions = yield self.raw_query(query)
-        return subscriptions
+        conn = await self.pool.acquire()
+        try:
+            records = await conn.fetch(query)
+        finally:
+            await self.pool.release(conn)
+        return [dict(record) for record in records]
 
-    @coroutine
-    def get_signals(self, stype=None, signal_id=None):
+    async def get_signals(self, stype=None, signal_id=None):
         """
         Return all signals onf stype or all signals if None
         :param stype: signal type (sensor, switch, camera)
@@ -106,51 +94,51 @@ class DBClient:
         query = "SELECT id,name,stype,url,active,attributes FROM signals"
         data = []
         if stype:
-            query += " WHERE stype=%s"
+            query += " WHERE stype=$1"
             data.append(stype)
             if signal_id:
-                query += " AND id=%s"
+                query += " AND id=$2"
                 data.append(signal_id)
         query += " ORDER BY name"
-        signals = yield self.raw_query(query, data)
-        if not signals:
+        conn = await self.pool.acquire()
+        try:
+            records = await conn.fetch(query, *data)
+        finally:
+            await self.pool.release(conn)
+        if not records:
             return []
-        return signals
+        return [dict(record) for record in records]
 
-    @coroutine
-    def get_sensor_signals(self):
+    async def get_sensor_signals(self):
         """
         Get sensor signal data
         :returns: list of sensor signals
         """
-        sensors = yield self.get_signals("sensor")
+        sensors = await self.get_signals("sensor")
         return sensors
 
-    @coroutine
-    def get_switch_signals(self, signal_id=None):
+    async def get_switch_signals(self, signal_id=None):
         """
         Get switch signal data
         :param signal_id: signal ID
         :returns: list of switch signals
         """
-        switches = yield self.get_signals("switch", signal_id)
+        switches = await self.get_signals("switch", signal_id)
         return switches
 
-    @coroutine
-    def get_sound_signals(self):
+    async def get_sound_signals(self):
         """
         Get sound signal data
         :returns: list of sound signals
         """
-        sounds = yield self.get_signals("sound")
+        sounds = await self.get_signals("sound")
         return sounds
 
-    @coroutine
-    def get_camera_signals(self, signal_id=None):
+    async def get_camera_signals(self, signal_id=None):
         """
         Get camera signal data
         :param signal_id: signal ID
         :returns: list of camera signals
         """
-        cameras = yield self.get_signals("camera", signal_id)
+        cameras = await self.get_signals("camera", signal_id)
         return cameras

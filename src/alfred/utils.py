@@ -4,22 +4,18 @@ Created on Dec 18, 2017
 @author: ionut
 """
 
-import binascii
 import datetime
 import json
 import logging
-import os
 import time
 from urllib.parse import urlparse
+
+import aiohttp.client
 from pywebpush import WebPusher
 from py_vapid import Vapid
-from tornado.gen import coroutine
-from tornado.httpclient import AsyncHTTPClient
-try:
-    from hashlib import pbkdf2_hmac
-    from hmac import compare_digest
-except ImportError:
-    from backports.pbkdf2 import pbkdf2_hmac, compare_digest
+from argon2 import PasswordHasher, exceptions
+
+logger = logging.getLogger(__name__)
 
 
 def time_to_minutes(time_value):
@@ -32,15 +28,14 @@ def time_to_minutes(time_value):
     return int(parts[0]) * 60 + int(parts[1])
 
 
-@coroutine
-def control(app):
+async def control(app):
     """
     Retrieve signal value and check that schedules are implemented
     :param app: tornado application instance
     """
     error_msg = ""
-    client = AsyncHTTPClient()
-    signals = yield app.database.get_signals()
+    client = aiohttp.client.ClientSession()
+    signals = await app.database.get_signals()
     now = datetime.datetime.now()
     now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
@@ -51,17 +46,16 @@ def control(app):
         try:
             if signal["attributes"].get("type", "") == "android":
                 url = signal["url"] + "/status.json?show_avail=1"
-                response = yield client.fetch(url)
+                response = await client.get(url)
                 aux = json.loads(response.body.decode())
                 value = "1" if aux.get("curvals", {}).get("torch", "") == "on" else "0"
             else:
-                response = yield client.fetch(signal["url"])
+                response = await client.get(signal["url"])
                 value = response.body.decode()
         except Exception as exc:
             error_msg += "cannot retrieve signal data for %s: %s" % (signal["name"], exc)
-            logging.error(error_msg)
+            logger.error(error_msg)
             continue
-
         if signal["stype"] == "sensor":
             app.cache[signal["id"]] = value
             continue
@@ -90,8 +84,7 @@ def control(app):
         raise Exception(error_msg)
 
 
-@coroutine
-def control_switch(signal, state):
+async def control_switch(signal, state):
     """
     Turn switch on or off
     :param signal: signal to make handle
@@ -114,64 +107,54 @@ def control_switch(signal, state):
         else:
             url += "/turn_off"
     client = AsyncHTTPClient()
-    logging.info("changing state for URL %s, value: %s", url, state)
-    response = yield client.fetch(url, method=method, body=body)
+    logger.info("changing state for URL %s, value: %s", url, state)
+    response = await client.fetch(url, method=method, body=body)
     return response.body.decode()
 
 
-@coroutine
-def play_sound(url):
+async def play_sound(url):
     """
     Play sound using url
     :param url: sounder URL to make the POST request to
     :return: decoded response body from POST request
     """
-    logging.info("playing sound for URL %s", url)
-    client = AsyncHTTPClient()
-    response = yield client.fetch(url, method="POST", body="{}")
+    logger.info("playing sound for URL %s", url)
+    client = aiohttp.client.ClientSession()
+    response = await client.get(url, method="POST", body="{}")
     return response.body.decode()
 
 
-def format_frame(frame):
+def make_pw_hash(password: str) -> str:
     """
-    Return a nice representation of frame.f_locals
-    :param frame: frame object
-    :returns: string representation
-    """
-    buf = ""
-    for key, value in frame.f_locals.items():
-        buf += "\t%s -> %s\n" % (key, value)
-    return buf
-
-
-def make_pwhash(algo, password, iterations):
-    """
-    Generate pbkdf2_hmac password hash using random salt and num interations
-    :param algo: hashing algorithm to be use such as "sha1" or "sha256"
+    Generate argon2 password hash
     :param password: password text to be hashed
-    :param iterations: number of hashing runs
-    :returns: algo$salt$hash
+    :returns: password hash
     """
-    salt = binascii.hexlify(os.urandom(16))
-    hsh = pbkdf2_hmac(algo, password.encode(), salt, iterations)
-    hsh = binascii.hexlify(hsh)
-    hsh = "%s$%s$%s" % (algo, salt.decode(), hsh.decode())
-    return hsh
+    password_hasher = PasswordHasher()
+    pw_hash = password_hasher.hash(password)
+    return pw_hash
 
 
-def compare_pwhashes(pwhash, password, iterations):
+def compare_pwhash(pw_hash: str, password: str) -> bool:
     """
-    Compute hash for current password and compare it to pwhash
-    :param pwhash: previously generated pwhash to be compared
+    Compute hash for current password and compare it to pw_hash
+    :param pw_hash: previously generated pw_hash to be compared
     :param password: password text to compute hash for
-    :param iterations: number of hashing runs
     :returns: True or False
     """
-    algo, salt, hsh = pwhash.split("$")
-    derived_key = pbkdf2_hmac(algo, password.encode(), salt.encode(), iterations)
-    derived_key = binascii.hexlify(derived_key)
-    return compare_digest(derived_key, hsh.encode())
-
+    password_hasher = PasswordHasher()
+    try:
+        password_hasher.verify(pw_hash, password)
+        # check rehash
+        # needs_rehash = False
+        # if result:
+        #     needs_rehash = ph.check_needs_rehash(pw_hash)
+    except exceptions.VerifyMismatchError:
+        return False
+    except exceptions.InvalidHash:
+        logger.error("tried to decode invalid hash: %s", password)
+        return False
+    return True
 
 def generate_vapid_headers(private_key_data, endpoint):
     """
@@ -192,8 +175,7 @@ def generate_vapid_headers(private_key_data, endpoint):
     return headers
 
 
-@coroutine
-def send_push_notification(payload, config, subscription):
+async def send_push_notification(payload, config, subscription):
     """
     Send push notification using subscription info (url and keys)
     :param payload: payload (usable) data to be sent
@@ -222,6 +204,5 @@ def send_push_notification(payload, config, subscription):
         "TTL": "86400"
     })
     client = AsyncHTTPClient()
-    result = yield client.fetch(subscription["endpoint"], method="POST",
-                                body=body["body"], headers=headers)
+    result = await client.fetch(subscription["endpoint"], method="POST", body=body["body"], headers=headers)
     return result.code

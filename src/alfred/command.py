@@ -4,40 +4,36 @@ Created on Dec 22, 2017
 @author: ionut
 """
 
+import asyncio
 import getpass
-import tornado
 
-import alfred
+from alfred import appkeys
 from alfred import utils
+from alfred.main import make_app
 
 
-@tornado.gen.coroutine
-def create_admin_user(ioloop):
+async def create_admin_user():
     """
-    Create IOLoop and run create_admin_user
-    :param ioloop: existing ioloop instance
+    Create admin user.
     """
+    app = make_app()
+    await app[appkeys.database].connect()
     name = input("Name: ")
     username = input("Username: ")
     password = getpass.getpass(prompt="Password: ")
-    app = alfred.make_app(ioloop)
-    password = utils.make_pwhash(app.config.PW_ALGO, password,
-                                 app.config.PW_ITERATIONS)
-    data = (name, username, password, 1)
-    query = """INSERT INTO users(name,username,password,level)
-    VALUES(%s,%s,%s,%s) RETURNING id"""
-    result = yield app.database.raw_query(query, data)
+    password = utils.make_pw_hash(password)
+    query = """INSERT INTO users(name,username,password,level) VALUES($1,$2,$3,$4) RETURNING id"""
+    result = await app[appkeys.database].pool.fetch(query, name, username, password, 1)
     if result:
         print("admin account created, don't forget your password")
     else:
         print("admin account NOT created, review above messages")
 
 
-def main():
+async def main():
     """Create IOLoop and run create_admin_user"""
-    ioloop = tornado.ioloop.IOLoop.instance()
-    ioloop.run_sync(lambda: create_admin_user(ioloop))
+    await create_admin_user()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

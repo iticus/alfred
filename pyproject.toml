@@ -1,0 +1,30 @@
+[build-system]
+build-backend = "uv_build"
+requires = [ "uv-build" ]
+
+[project]
+name = "alfred"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "aiohttp>=3.13.3",
+    "aiohttp-jinja2>=1.6",
+    "aiohttp-session>=2.12.1",
+    "argon2-cffi>=25.1.0",
+    "asyncpg>=0.31.0",
+    "py-vapid>=1.9.4",
+    "pywebpush>=2.3.0",
+    "redis>=7.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "ty",
+]
+
+[tool.ty.src]
+include = [ "src", "tests" ]
+exclude = [ "src/alfred/hardware/esp8266" ]
