@@ -47,9 +47,11 @@ def configure_signals():
 @tornado.gen.coroutine
 def run_control(app):
     """
-    Run control function to retrive signal values and process schedules
+    Run control function to retrieve signal values and process schedules
     :param app: tornado application instance
     """
+    now = datetime.datetime.now()
+    one_day = datetime.timedelta(hours=24)
     try:
         yield control(app)
     except Exception as exc:
@@ -59,18 +61,21 @@ def run_control(app):
         sub_dict = {}
         for subscription in subscriptions:
             key = "%s" % subscription["id"]
+            if key in app.cache["NOTIFICATION_CACHE"] and now - app.cache["NOTIFICATION_CACHE"][key] < one_day:
+                continue
             sub_dict[key] = send_push_notification(payload, app.config, subscription)
-        wait_iterator = WaitIterator(**sub_dict)
-        while not wait_iterator.done():
-            try:
-                result = yield wait_iterator.next()
-                if result:
-                    logging.info("subscription %s, result %s", wait_iterator.current_index, result)
-            except Exception as exc:
-                logging.error("subscription %s, exception %s", wait_iterator.current_index, exc)
-
-    tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=30),
-                                                 functools.partial(run_control, app))
+            app.cache["NOTIFICATION_CACHE"][key] = now
+        if sub_dict:
+            wait_iterator = WaitIterator(**sub_dict)
+            while not wait_iterator.done():
+                try:
+                    result = yield wait_iterator.next()
+                    if result:
+                        logging.info("subscription %s, result %s", wait_iterator.current_index, result)
+                except Exception as exc:
+                    logging.error("subscription %s, exception %s", wait_iterator.current_index, exc)
+    td = datetime.timedelta(seconds=30)
+    tornado.ioloop.IOLoop.instance().add_timeout(td, functools.partial(run_control, app))
 
 
 def make_app(io_loop=None):
@@ -102,7 +107,7 @@ def make_app(io_loop=None):
     )
     app.config = settings
     app.database = DBClient(settings.DSN, io_loop)
-    app.cache = {}
+    app.cache = {"NOTIFICATION_CACHE": {}}
     app.io_loop = io_loop
     return app
 
