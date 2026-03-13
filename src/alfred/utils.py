@@ -53,7 +53,10 @@ async def control(app):
                 response = await client.get(signal["url"])
                 value = response.body.decode()
         except Exception as exc:
-            error_msg += "cannot retrieve signal data for %s: %s" % (signal["name"], exc)
+            error_msg += "cannot retrieve signal data for %s: %s" % (
+                signal["name"],
+                exc,
+            )
             logger.error(error_msg)
             continue
         if signal["stype"] == "sensor":
@@ -156,6 +159,7 @@ def compare_pwhash(pw_hash: str, password: str) -> bool:
         return False
     return True
 
+
 def generate_vapid_headers(private_key_data, endpoint):
     """
     Generate vapid headers for web push call
@@ -168,7 +172,7 @@ def generate_vapid_headers(private_key_data, endpoint):
     vapid_claims = {
         "aud": aud,
         "exp": int(time.time()) + 86400,
-        "sub": "mailto:ticus.ionut@gmail.com"
+        "sub": "mailto:ticus.ionut@gmail.com",
     }
     vapid_key = Vapid.from_pem(private_key=private_key_data.encode())
     headers = vapid_key.sign(vapid_claims)
@@ -185,10 +189,7 @@ async def send_push_notification(payload, config, subscription):
     """
     subscription_info = {
         "endpoint": subscription["endpoint"],
-        "keys": {
-            "auth": subscription["auth_secret"],
-            "p256dh": subscription["key"]
-        }
+        "keys": {"auth": subscription["auth_secret"], "p256dh": subscription["key"]},
     }
     web_push = WebPusher(subscription_info)
     body = web_push.encode(payload, "aesgcm")
@@ -197,12 +198,14 @@ async def send_push_notification(payload, config, subscription):
     if crypto_key:
         crypto_key += ";"
     crypto_key += "dh=" + body["crypto_key"].decode()
-    headers.update({
-        "Crypto-Key": crypto_key,
-        "Content-Encoding": "aesgcm",
-        "Encryption": "salt=" + body["salt"].decode(),
-        "TTL": "86400"
-    })
+    headers.update(
+        {
+            "Crypto-Key": crypto_key,
+            "Content-Encoding": "aesgcm",
+            "Encryption": "salt=" + body["salt"].decode(),
+            "TTL": "86400",
+        }
+    )
     client = AsyncHTTPClient()
     result = await client.fetch(subscription["endpoint"], method="POST", body=body["body"], headers=headers)
     return result.code

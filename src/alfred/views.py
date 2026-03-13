@@ -33,12 +33,14 @@ class BaseView(web.View):
         :param func: function to decorate
         :return: decorator
         """
+
         async def wrapper(self: web.Request, *args: Any, **kwargs: Any) -> Any:
             self.session = await get_session(self.request)
             if "username" not in self.session:
                 next_url = self.request.rel_url or "/"
                 return web.HTTPFound(f"/login?next={next_url}")
             return await func(self, *args, **kwargs)
+
         return wrapper
 
 
@@ -82,7 +84,10 @@ class Home(BaseView):
 
     @BaseView.authenticated
     async def get(self):
-        context = {"vapid_public_key": self.config.VAPID_PUBLIC_KEY, "session": self.session}
+        context = {
+            "vapid_public_key": self.config.VAPID_PUBLIC_KEY,
+            "session": self.session,
+        }
         return aiohttp_jinja2.render_template("home.html", self.request, context=context)
 
 

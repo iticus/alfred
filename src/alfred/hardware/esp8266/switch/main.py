@@ -9,6 +9,7 @@ import uasyncio as asyncio
 
 pin = machine.Pin(13, machine.Pin.OUT)
 
+
 @asyncio.coroutine
 def serve(reader, writer):
     request = yield from reader.read()
@@ -23,6 +24,7 @@ def serve(reader, writer):
         value = "%s" % (pin.value())
         yield from writer.awrite(response + value)
     yield from writer.aclose()
+
 
 loop = asyncio.get_event_loop()
 loop.call_soon(asyncio.start_server(serve, "0.0.0.0", 8080))

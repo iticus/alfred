@@ -3,6 +3,7 @@ Created on Dec 17, 2017
 
 @author: ionut
 """
+
 import asyncio
 import datetime
 import functools
@@ -38,7 +39,7 @@ async def startup(app: web.Application) -> None:
     app[appkeys.cache] = redis.Redis(
         host=app[appkeys.config].REDIS_HOST,
         port=app[appkeys.config].REDIS_PORT,
-        password=app[appkeys.config].REDIS_PASSWORD
+        password=app[appkeys.config].REDIS_PASSWORD,
     )
     await app[appkeys.cache].ping()
     storage = RedisStorage(app[appkeys.cache], max_age=14 * 86400)
@@ -83,9 +84,17 @@ async def run_control(app: web.Application):
                 try:
                     result = await wait_iterator.next()
                     if result:
-                        logging.info("subscription %s, result %s", wait_iterator.current_index, result)
+                        logging.info(
+                            "subscription %s, result %s",
+                            wait_iterator.current_index,
+                            result,
+                        )
                 except Exception as exc:
-                    logging.error("subscription %s, exception %s", wait_iterator.current_index, exc)
+                    logging.error(
+                        "subscription %s, exception %s",
+                        wait_iterator.current_index,
+                        exc,
+                    )
     td = datetime.timedelta(seconds=30)
     tornado.ioloop.IOLoop.instance().add_timeout(td, functools.partial(run_control, app))
 
@@ -97,7 +106,7 @@ def make_app():
     :returns: application instance
     """
     app = web.Application()
-    app.router.add_view("/", views.Home),
+    (app.router.add_view("/", views.Home),)
     app.router.add_view(r"/login{tail:.*?}", views.Login)
     app.router.add_view(r"/logout{tail:.*?}", views.Logout)
     app.router.add_view(r"/sensors{tail:.*?}", views.Sensors)
@@ -125,9 +134,16 @@ def main() -> None:
     application = make_app()
     loop = asyncio.new_event_loop()
     # loop.create_task(run_control(application))
-    logging.info("starting alfred on %s:%s", application[appkeys.config].ADDRESS, application[appkeys.config].PORT)
+    logging.info(
+        "starting alfred on %s:%s",
+        application[appkeys.config].ADDRESS,
+        application[appkeys.config].PORT,
+    )
     web.run_app(
-        application, host=application[appkeys.config].ADDRESS, port=application[appkeys.config].PORT, access_log=None
+        application,
+        host=application[appkeys.config].ADDRESS,
+        port=application[appkeys.config].PORT,
+        access_log=None,
     )
 
 

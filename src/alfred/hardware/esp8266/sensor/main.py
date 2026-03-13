@@ -10,6 +10,7 @@ import uasyncio as asyncio
 
 sensor = dht.DHT22(machine.Pin(12))
 
+
 @asyncio.coroutine
 def measure():
     while True:
@@ -19,6 +20,7 @@ def measure():
         except:
             pass
 
+
 @asyncio.coroutine
 def serve(reader, writer):
     request = await reader.read()
@@ -26,6 +28,7 @@ def serve(reader, writer):
     value = "%s,%s" % (sensor.temperature(), sensor.humidity())
     await writer.awrite(response + value)
     await writer.aclose()
+
 
 loop = asyncio.get_event_loop()
 loop.call_soon(measure())

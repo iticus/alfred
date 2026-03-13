@@ -65,7 +65,7 @@ class DBClient:
                 datetime.datetime.now(tz=datetime.UTC),
                 subscription["endpoint"],
                 subscription["key"],
-                subscription["authSecret"]
+                subscription["authSecret"],
             )
         finally:
             await self.pool.release(conn)

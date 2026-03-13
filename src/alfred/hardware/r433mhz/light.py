@@ -26,7 +26,7 @@ class ControlHandler(web.View):
     """
 
     async def post(self):
-        logger.info("got command %s", self.request.uri)
+        logger.info("got command %s", self.request.path_qs)
         os.system("sudo r433mhz 11111 1 0")
         return web.Response(body="ok")
 
@@ -36,7 +36,7 @@ def make_app() -> web.Application:
     Create main Tornado app and return it
     """
     app = web.Application()
-    app.router.add_view("/", Main),
+    app.router.add_view("/", Main)
     app.router.add_view("/turn_on{tail:.*?}", ControlHandler)
     app.router.add_view("/turn_off{tail:.*?}", ControlHandler)
     return app
@@ -49,7 +49,7 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
-        format="[%(asctime)s] - %(levelname)s - %(message)s"
+        format="[%(asctime)s] - %(levelname)s - %(message)s",
     )
     application = make_app()
     web.run_app(application, host="0.0.0.0", port=8080, access_log=None)

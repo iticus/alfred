@@ -54,7 +54,7 @@ def make_app() -> web.Application:
     Create main web app and return it
     """
     app = web.Application()
-    app.router.add_view("/", Main),
+    app.router.add_view("/", Main)
     app.router.add_view("/play{tail:.*?}", Sound)
     return app
 
@@ -66,7 +66,7 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
-        format="[%(asctime)s] - %(levelname)s - %(message)s"
+        format="[%(asctime)s] - %(levelname)s - %(message)s",
     )
     application = make_app()
     web.run_app(application, host="0.0.0.0", port=8000, access_log=None)
