@@ -44,6 +44,8 @@ async def startup(app: web.Application) -> None:
     await app[appkeys.cache].ping()
     storage = RedisStorage(app[appkeys.cache], max_age=14 * 86400)
     setup(app, storage)
+    task = asyncio.create_task(run_control(app))
+    logger.info("started  background task app %s", task)
 
 
 async def shutdown(app: web.Application) -> None:
@@ -63,40 +65,37 @@ async def run_control(app: web.Application):
     Run control function to retrieve signal values and process schedules
     :param app: tornado application instance
     """
-    now = datetime.datetime.now()
-    one_day = datetime.timedelta(hours=24)
-    try:
-        await control(app)
-    except Exception as exc:
-        payload = "cannot run control code: %s" % exc
-        logging.error(payload)
-        subscriptions = await app.database.get_subscriptions()
-        sub_dict = {}
-        for subscription in subscriptions:
-            key = "%s" % subscription["id"]
-            if key in app.cache["NOTIFICATION_CACHE"] and now - app.cache["NOTIFICATION_CACHE"][key] < one_day:
+    while True:
+        now = datetime.datetime.now()
+        one_day = datetime.timedelta(hours=24)
+        try:
+            logger.debug("running control loop")
+            await control(app)
+        except Exception as exc:
+            logger.exception("cannot run control loop")
+            subscriptions = await app[appkeys.database].get_subscriptions()
+            tasks = {}
+            payload = "cannot run control code: %s" % exc
+            for subscription in subscriptions:
+                key = f"{subscription['id']}"
+                if (
+                    key in app[appkeys.cache]["NOTIFICATION_CACHE"]
+                    and now - app[appkeys.cache]["NOTIFICATION_CACHE"][key] < one_day
+                ):
+                    continue
+                tasks[send_push_notification(payload, app[appkeys.config], subscription)] = key
+                app[appkeys.cache]["NOTIFICATION_CACHE"][key] = now
+            if not tasks:
                 continue
-            sub_dict[key] = send_push_notification(payload, app.config, subscription)
-            app.cache["NOTIFICATION_CACHE"][key] = now
-        if sub_dict:
-            wait_iterator = WaitIterator(**sub_dict)
-            while not wait_iterator.done():
+            async for task in asyncio.as_completed(tasks.values()):
                 try:
-                    result = await wait_iterator.next()
+                    result = await task
                     if result:
-                        logging.info(
-                            "subscription %s, result %s",
-                            wait_iterator.current_index,
-                            result,
-                        )
+                        logger.info("subscription %s, result %s", tasks[task], result)
                 except Exception as exc:
-                    logging.error(
-                        "subscription %s, exception %s",
-                        wait_iterator.current_index,
-                        exc,
-                    )
-    td = datetime.timedelta(seconds=30)
-    tornado.ioloop.IOLoop.instance().add_timeout(td, functools.partial(run_control, app))
+                    logging.error("subscription %s, exception %s", tasks[task], exc)
+        finally:
+            await asyncio.sleep(30)
 
 
 def make_app():
@@ -132,8 +131,6 @@ def make_app():
 def main() -> None:
     """Start main web application instance"""
     application = make_app()
-    loop = asyncio.new_event_loop()
-    # loop.create_task(run_control(application))
     logging.info(
         "starting alfred on %s:%s",
         application[appkeys.config].ADDRESS,

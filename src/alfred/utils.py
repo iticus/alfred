@@ -5,7 +5,6 @@ Created on Dec 18, 2017
 """
 
 import datetime
-import json
 import logging
 import time
 from urllib.parse import urlparse
@@ -14,6 +13,8 @@ import aiohttp.client
 from pywebpush import WebPusher
 from py_vapid import Vapid
 from argon2 import PasswordHasher, exceptions
+
+from alfred import appkeys
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ async def control(app):
     """
     error_msg = ""
     client = aiohttp.client.ClientSession()
-    signals = await app.database.get_signals()
+    signals = await app[appkeys.database].get_signals()
     now = datetime.datetime.now()
     now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
@@ -47,20 +48,17 @@ async def control(app):
             if signal["attributes"].get("type", "") == "android":
                 url = signal["url"] + "/status.json?show_avail=1"
                 response = await client.get(url)
-                aux = json.loads(response.body.decode())
+                aux = await response.json()
                 value = "1" if aux.get("curvals", {}).get("torch", "") == "on" else "0"
             else:
                 response = await client.get(signal["url"])
-                value = response.body.decode()
+                value = response.text()
         except Exception as exc:
-            error_msg += "cannot retrieve signal data for %s: %s" % (
-                signal["name"],
-                exc,
-            )
-            logger.error(error_msg)
+            error_msg += f"cannot retrieve signal data for {signal['name']}: {exc}"
+            logger.exception("cannot retrieve signal data")
             continue
         if signal["stype"] == "sensor":
-            app.cache[signal["id"]] = value
+            app[appkeys.cache][signal["id"]] = value
             continue
         # Handle switch value and schedule
         app.cache[signal["id"]] = True if value in ["1", "1,1"] else False
@@ -71,18 +69,19 @@ async def control(app):
             stop_time = time_to_minutes(stop_time)
             if start_time <= stop_time:
                 if start_time <= now_minutes < stop_time and not app.cache[signal["id"]]:
-                    control_switch(signal, "1")
+                    await control_switch(signal, "1")
                     app.cache[signal["id"]] = True
                 elif not (start_time <= now_minutes < stop_time) and app.cache[signal["id"]]:
-                    control_switch(signal, "0")
+                    await control_switch(signal, "0")
                     app.cache[signal["id"]] = False
             else:
                 if stop_time <= now_minutes < start_time and app.cache[signal["id"]]:
-                    control_switch(signal, "0")
+                    await control_switch(signal, "0")
                     app.cache[signal["id"]] = False
                 elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
-                    control_switch(signal, "1")
+                    await control_switch(signal, "1")
                     app.cache[signal["id"]] = True
+    await client.close()
     if error_msg:
         raise Exception(error_msg)
 
@@ -109,10 +108,12 @@ async def control_switch(signal, state):
             url += "/turn_on"
         else:
             url += "/turn_off"
-    client = AsyncHTTPClient()
+    client = aiohttp.client.ClientSession()
     logger.info("changing state for URL %s, value: %s", url, state)
-    response = await client.fetch(url, method=method, body=body)
-    return response.body.decode()
+    response = await client.request(method=method, url=url, data=body)
+    data = await response.text()
+    await client.close()
+    return data
 
 
 async def play_sound(url):
@@ -123,8 +124,9 @@ async def play_sound(url):
     """
     logger.info("playing sound for URL %s", url)
     client = aiohttp.client.ClientSession()
-    response = await client.get(url, method="POST", body="{}")
-    return response.body.decode()
+    response = await client.request(method="POST", url=url, body="{}")
+    data = await response.text()
+    return data
 
 
 def make_pw_hash(password: str) -> str:
@@ -206,6 +208,7 @@ async def send_push_notification(payload, config, subscription):
             "TTL": "86400",
         }
     )
-    client = AsyncHTTPClient()
-    result = await client.fetch(subscription["endpoint"], method="POST", body=body["body"], headers=headers)
-    return result.code
+    client = aiohttp.client.ClientSession()
+    result = await client.post(subscription["endpoint"], data=body["body"], headers=headers)
+    await client.close()
+    return result.status

@@ -59,6 +59,7 @@ class Login(BaseView):
             user = await self.database.get_user(data["username"])
             if not user:
                 return web.HTTPFound(location="/login?message=no such user found")
+            assert isinstance(data["password"], str), f"invalid password"
             if not utils.compare_pwhash(user["password"], data["password"]):
                 return web.HTTPFound(location="/login?message=invalid password")
         else:
@@ -176,7 +177,7 @@ class VideoHTTP(BaseView):
         if not self.get_secure_cookie("username"):
             logging.warning("received non-aunthenticated ws connection")
             return self.close()
-        self.url = self.get_argument("url", None)
+        self.url = self.request.get("url", None)
         if not self.url:
             return self.close()
         self.client = aiohttp.client.ClientSession()

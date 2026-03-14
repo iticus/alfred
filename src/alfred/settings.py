@@ -8,14 +8,9 @@ import logging
 import os
 
 # Logging config
-logging.basicConfig(
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-    format="[%(asctime)s] - %(levelname)s - %(message)s",
-)
-logging.getLogger("tornado.access").setLevel(logging.WARNING)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-# Tornado settings
+# Web settings
 ADDRESS = "0.0.0.0"
 PORT = 8000
 TEMPLATE_PATH = "templates"

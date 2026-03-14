@@ -5,7 +5,9 @@ Created on Dec 18, 2017
 """
 
 import logging
-import os
+from asyncio import subprocess
+from shlex import quote
+
 from aiohttp import web
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,14 @@ class ControlHandler(web.View):
 
     async def post(self):
         logger.info("got command %s", self.request.path_qs)
-        os.system("sudo r433mhz 11111 1 0")
+        cmd = quote("sudo r433mhz 11111 1 0")
+        proc = await subprocess.create_subprocess_shell(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logger.debug("%s exited with", cmd, proc.returncode)
+        if stdout:
+            logger.info("command stdout %s", stdout)
+        if stderr:
+            logger.error("command stdout %s", stderr)
         return web.Response(body="ok")
 
 
