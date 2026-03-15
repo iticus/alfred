@@ -17,13 +17,14 @@ def measure():
         await asyncio.sleep(3)
         try:
             sensor.measure()
-        except:
+        except Exception:
             pass
 
 
 @asyncio.coroutine
 def serve(reader, writer):
     request = await reader.read()
+    assert request is not None
     response = "HTTP/1.0 200 OK\r\n\r\n"
     value = "%s,%s" % (sensor.temperature(), sensor.humidity())
     await writer.awrite(response + value)

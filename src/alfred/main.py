@@ -6,7 +6,6 @@ Created on Dec 17, 2017
 
 import asyncio
 import datetime
-import functools
 import logging
 from pathlib import Path
 
@@ -113,11 +112,11 @@ def make_app():
     app.router.add_view(r"/sounds{tail:.*?}", views.Sounds)
     app.router.add_view(r"/cameras{tail:.*?}", views.Cameras)
     app.router.add_view(r"/http_video{tail:.*?}", views.VideoHTTP)
-    app.router.add_view(r"/ws_video{tail:.*?}", views.VideoWS)
     app.router.add_view(r"/subscribe{tail:.*?}", views.Subscribe)
     app.router.add_static("/static", Path(__file__).parent / "static")
     app.router.add_view("/favicon.ico", views.Favicon)
     app.router.add_view("/service-worker.js", views.ServiceWorker)
+    app.router.add_route("get", "/ws_video{tail:.*?}", views.websocket_handler)
     app.middlewares.append(error_middleware)
     app[appkeys.config] = settings
     app[appkeys.database] = DBClient(settings.DSN)

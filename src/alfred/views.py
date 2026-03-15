@@ -59,7 +59,7 @@ class Login(BaseView):
             user = await self.database.get_user(data["username"])
             if not user:
                 return web.HTTPFound(location="/login?message=no such user found")
-            assert isinstance(data["password"], str), f"invalid password"
+            assert isinstance(data["password"], str), "invalid password"
             if not utils.compare_pwhash(user["password"], data["password"]):
                 return web.HTTPFound(location="/login?message=invalid password")
         else:
@@ -102,7 +102,7 @@ class Sensors(BaseView):
         """Return all switches data"""
         sensors = await self.database.get_sensor_signals()
         for sensor in sensors:
-            sensor["value"] = self.cache.get(sensor["id"], None)
+            sensor["value"] = await self.cache.get(sensor["id"])
         return web.json_response({"status": "ok", "sensors": sensors})
 
 
@@ -116,21 +116,21 @@ class Switches(BaseView):
         """Return all switches data"""
         switches = await self.database.get_switch_signals()
         for switch in switches:
-            switch["value"] = self.cache.get(switch["id"], None)
+            switch["value"] = await self.cache.get(f"{switch['id']}")
         return web.json_response({"status": "ok", "switches": switches})
 
     @BaseView.authenticated
     async def post(self):
         """Toggle switch"""
         data = await self.post()
-        sid = int(data.get("sid", "0"))
-        signals = await self.database.get_switch_signals(sid)
+        sid = data.get("sid", "0")
+        signals = await self.database.get_switch_signals(int(sid))
         signal = signals[0]
         state = data.get("state")
         response = await utils.control_switch(signal, state)
         if "ok" not in response.lower():
             return web.json_response({"status": "error"}, status=500)
-        self.cache[sid] = True if state == "1" else False
+        await self.cache.set(sid, state)
         return web.json_response({"status": "ok"})
 
 
@@ -173,9 +173,9 @@ class VideoHTTP(BaseView):
     """
 
     def open(self):
-        logging.info("new ws http_video client %s", self)
+        logging.info("new http_video client %s", self)
         if not self.get_secure_cookie("username"):
-            logging.warning("received non-aunthenticated ws connection")
+            logging.warning("received non-aunthenticated connection")
             return self.close()
         self.url = self.request.get("url", None)
         if not self.url:
@@ -200,42 +200,67 @@ class VideoHTTP(BaseView):
             self.close()
 
 
-class VideoWS(BaseView):
-    """
-    Request Handler for "/ws_video/"
-    """
+async def websocket_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    url = request.query.get("url", None)
+    if not url:
+        return ws
+    session = aiohttp.client.ClientSession()
+    async with session.ws_connect(url) as wsc:
+        async for msg in wsc:
+            if msg.type == aiohttp.WSMsgType.BINARY:
+                if msg.data == "close cmd":
+                    await ws.close()
+                    break
+                else:
+                    await ws.send_str(msg.data + "/answer")
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                break
+    async for msg in ws:
+        if msg.type == aiohttp.WSMsgType.TEXT:
+            if msg.data == "close":
+                await ws.close()
+            else:
+                await ws.send_str(msg.data + "/answer")
+        elif msg.type == aiohttp.WSMsgType.ERROR:
+            print("ws connection closed with exception %s" % ws.exception())
 
-    def select_subprotocol(self, subprotocols):
-        logging.info("got subprotocols %s", subprotocols)
-        subprotocol = subprotocols[0] if subprotocols else None
-        return subprotocol
+    print("websocket connection closed")
 
-    async def open(self):
-        logging.info("new ws_video client %s", self)
-        if not self.get_secure_cookie("username"):
-            logging.warning("received non-aunthenticated ws connection")
-            return self.close()
-        url = self.get_argument("url", None)
-        if not url:
-            return self.close()
-        self.upstream = await websocket_connect(url, on_message_callback=self.upstream_message)
+    return ws
 
-    def on_close(self):
-        self.upstream.close()
-        logging.info("removing ws_video client %s", self)
 
-    def on_message(self, message):
-        if message == "!":
-            logging.info("closing websocket by client request")
-            self.close()
-        elif message != "?":
-            logging.info("got ws message %s from %s", message, self)
-
-    def upstream_message(self, message):
-        try:
-            self.write_message(message, binary=True)
-        except WebSocketClosedError:
-            self.close()
+#
+# class VideoWS(BaseView):
+#     """
+#     Request Handler for "/ws_video/"
+#     """
+#
+#     async def open(self):
+#         logging.info("new ws_video client %s", self)
+#         if not self.get_secure_cookie("username"):
+#             logging.warning("received non-aunthenticated ws connection")
+#             return self.close()
+#
+#         self.upstream = await websocket_connect(url, on_message_callback=self.upstream_message)
+#
+#     def on_close(self):
+#         self.upstream.close()
+#         logging.info("removing ws_video client %s", self)
+#
+#     def on_message(self, message):
+#         if message == "!":
+#             logging.info("closing websocket by client request")
+#             self.close()
+#         elif message != "?":
+#             logging.info("got ws message %s from %s", message, self)
+#
+#     def upstream_message(self, message):
+#         try:
+#             self.write_message(message, binary=True)
+#         except WebSocketClosedError:
+#             self.close()
 
 
 class Subscribe(BaseView):
