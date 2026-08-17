@@ -1,11 +1,11 @@
-"""
-Created on Dec 17, 2017
+"""Created on Dec 17, 2017.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import aiohttp.client
 import aiohttp_jinja2
@@ -13,8 +13,7 @@ from aiohttp import web
 from aiohttp.web_fileresponse import FileResponse
 from aiohttp_session import get_session, new_session
 
-from alfred import appkeys
-from alfred import utils
+from alfred import appkeys, utils
 
 
 class BaseView(web.View):
@@ -28,8 +27,7 @@ class BaseView(web.View):
 
     @staticmethod
     def authenticated(func: Callable) -> Callable:
-        """
-        Decorator for checking authentication for requests
+        """Decorator for checking authentication for requests
         :param func: function to decorate
         :return: decorator
         """
@@ -168,9 +166,7 @@ class Cameras(BaseView):
 
 
 class VideoHTTP(BaseView):
-    """
-    Request Handler for "/http_video/"
-    """
+    """Request Handler for "/http_video/" """
 
     def open(self):
         logging.info("new http_video client %s", self)
@@ -196,7 +192,7 @@ class VideoHTTP(BaseView):
             else:
                 self.write_message(message)  # echo
         except Exception as exc:
-            logging.error("cannot handle mjpeg data %s", exc)
+            logging.exception("cannot handle mjpeg data %s", exc)
             self.close()
 
 
@@ -213,8 +209,7 @@ async def websocket_handler(request):
                 if msg.data == "close cmd":
                     await ws.close()
                     break
-                else:
-                    await ws.send_str(msg.data + "/answer")
+                await ws.send_str(msg.data + "/answer")
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 break
     async for msg in ws:

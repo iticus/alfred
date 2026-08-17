@@ -32,7 +32,7 @@ body {
 }
 
 button {
-    background-color: #17a2b8; 
+    background-color: #17a2b8;
     border: none;
     color: white;
     padding: 15px 32px;
@@ -119,7 +119,7 @@ div.signal img {
     margin-left: auto;
     margin-right: auto;
 }
-  
+
 }
 
 /* The switch - the box around the slider */

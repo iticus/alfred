@@ -1,17 +1,20 @@
-"""
-Created on Dec 17, 2017
+"""Created on Dec 17, 2017.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
 import os
 
+from dotenv import load_dotenv
+
 # Logging config
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
+_ = load_dotenv()
+
 # Web settings
-ADDRESS = "0.0.0.0"
+ADDRESS = "127.0.0.1"
 PORT = 8000
 TEMPLATE_PATH = "templates"
 STATIC_PATH = "static"

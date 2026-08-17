@@ -1,7 +1,6 @@
-"""
-Created on Dec 17, 2017
+"""Created on Dec 17, 2017.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import asyncio
@@ -12,13 +11,11 @@ from pathlib import Path
 import aiohttp_jinja2
 import jinja2
 import redis.asyncio as redis
+from aiohttp import web
 from aiohttp_session import setup
 from aiohttp_session.redis_storage import RedisStorage
-from aiohttp import web
 
-from alfred import appkeys
-from alfred import views
-from alfred import settings
+from alfred import appkeys, settings, views
 from alfred.database import DBClient
 from alfred.middlewares import error_middleware
 from alfred.utils import control, send_push_notification
@@ -27,8 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 async def startup(app: web.Application) -> None:
-    """
-    Establish database and cache connections
+    """Establish database and cache connections
     :param app: application instance
     """
     logger.info("connecting to database")
@@ -48,8 +44,7 @@ async def startup(app: web.Application) -> None:
 
 
 async def shutdown(app: web.Application) -> None:
-    """
-    Gracefully disconnect from database and cache servers
+    """Gracefully disconnect from database and cache servers
     :param app: application instance
     """
     logger.info("disconnecting from database")
@@ -60,8 +55,7 @@ async def shutdown(app: web.Application) -> None:
 
 
 async def run_control(app: web.Application):
-    """
-    Run control function to retrieve signal values and process schedules
+    """Run control function to retrieve signal values and process schedules
     :param app: tornado application instance
     """
     while True:
@@ -92,14 +86,13 @@ async def run_control(app: web.Application):
                     if result:
                         logger.info("subscription %s, result %s", tasks[task], result)
                 except Exception as exc:
-                    logging.error("subscription %s, exception %s", tasks[task], exc)
+                    logging.exception("subscription %s, exception %s", tasks[task], exc)
         finally:
             await asyncio.sleep(30)
 
 
 def make_app():
-    """
-    Create and return tornado.web.Application object so it can be used in tests too
+    """Create and return tornado.web.Application object so it can be used in tests too
     :param io_loop: already existing io_loop (used for testing)
     :returns: application instance
     """

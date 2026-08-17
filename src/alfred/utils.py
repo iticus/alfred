@@ -1,7 +1,6 @@
-"""
-Created on Dec 18, 2017
+"""Created on Dec 18, 2017.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import datetime
@@ -10,9 +9,9 @@ import time
 from urllib.parse import urlparse
 
 import aiohttp.client
-from pywebpush import WebPusher
-from py_vapid import Vapid
 from argon2 import PasswordHasher, exceptions
+from py_vapid import Vapid
+from pywebpush import WebPusher
 
 from alfred import appkeys
 
@@ -20,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def time_to_minutes(time_value):
-    """
-    Convert a HH:MM string value to number of minutes since 00:00
+    """Convert a HH:MM string value to number of minutes since 00:00
     :param time_value: hours:minutes value to convert
     :return: number of minutes since 00:00
     """
@@ -30,8 +28,7 @@ def time_to_minutes(time_value):
 
 
 async def control(app):
-    """
-    Retrieve signal value and check that schedules are implemented
+    """Retrieve signal value and check that schedules are implemented
     :param app: tornado application instance
     """
     error_msg = ""
@@ -74,21 +71,19 @@ async def control(app):
                 elif not (start_time <= now_minutes < stop_time) and app.cache[signal["id"]]:
                     await control_switch(signal, "0")
                     app.cache[signal["id"]] = False
-            else:
-                if stop_time <= now_minutes < start_time and app.cache[signal["id"]]:
-                    await control_switch(signal, "0")
-                    app.cache[signal["id"]] = False
-                elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
-                    await control_switch(signal, "1")
-                    app.cache[signal["id"]] = True
+            elif stop_time <= now_minutes < start_time and app.cache[signal["id"]]:
+                await control_switch(signal, "0")
+                app.cache[signal["id"]] = False
+            elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
+                await control_switch(signal, "1")
+                app.cache[signal["id"]] = True
     await client.close()
     if error_msg:
         raise Exception(error_msg)
 
 
 async def control_switch(signal, state):
-    """
-    Turn switch on or off
+    """Turn switch on or off
     :param signal: signal to make handle
     :param state: desired state ("0" or "1")
     :return: decoded response body from POST request
@@ -103,11 +98,10 @@ async def control_switch(signal, state):
             url += "/enabletorch"
         else:
             url += "/disabletorch"
+    elif state == "1":
+        url += "/turn_on"
     else:
-        if state == "1":
-            url += "/turn_on"
-        else:
-            url += "/turn_off"
+        url += "/turn_off"
     client = aiohttp.client.ClientSession()
     logger.info("changing state for URL %s, value: %s", url, state)
     response = await client.request(method=method, url=url, data=body)
@@ -117,8 +111,7 @@ async def control_switch(signal, state):
 
 
 async def play_sound(url):
-    """
-    Play sound using url
+    """Play sound using url
     :param url: sounder URL to make the POST request to
     :return: decoded response body from POST request
     """
@@ -130,8 +123,7 @@ async def play_sound(url):
 
 
 def make_pw_hash(password: str) -> str:
-    """
-    Generate argon2 password hash
+    """Generate argon2 password hash
     :param password: password text to be hashed
     :returns: password hash
     """
@@ -141,8 +133,7 @@ def make_pw_hash(password: str) -> str:
 
 
 def compare_pwhash(pw_hash: str, password: str) -> bool:
-    """
-    Compute hash for current password and compare it to pw_hash
+    """Compute hash for current password and compare it to pw_hash
     :param pw_hash: previously generated pw_hash to be compared
     :param password: password text to compute hash for
     :returns: True or False
@@ -163,14 +154,13 @@ def compare_pwhash(pw_hash: str, password: str) -> bool:
 
 
 def generate_vapid_headers(private_key_data, endpoint):
-    """
-    Generate vapid headers for web push call
+    """Generate vapid headers for web push call
     :param private_key_data: private key string data
     :param endpoint: endpoint URL from subscription info
     :return: vapid Authorization header
     """
     url = urlparse(endpoint)
-    aud = "{}://{}".format(url.scheme, url.netloc)
+    aud = f"{url.scheme}://{url.netloc}"
     vapid_claims = {
         "aud": aud,
         "exp": int(time.time()) + 86400,
@@ -182,8 +172,7 @@ def generate_vapid_headers(private_key_data, endpoint):
 
 
 async def send_push_notification(payload, config, subscription):
-    """
-    Send push notification using subscription info (url and keys)
+    """Send push notification using subscription info (url and keys)
     :param payload: payload (usable) data to be sent
     :param config: configuration information from Tornado app
     :param subscription: subscription info dict (keys, endpoint)

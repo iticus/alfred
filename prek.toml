@@ -1,0 +1,219 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+default_install_hook_types = [
+  "pre-commit",
+  "commit-msg",
+  "post-checkout",
+  "post-merge",
+  "post-rewrite"
+  ]
+default_stages = ["pre-commit"]
+
+[[repos]]
+repo = "https://github.com/tox-dev/pyproject-fmt"
+rev = "v2.21.2"
+hooks = [
+  {
+    id = "pyproject-fmt",
+    priority = 0
+  }
+]
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  {
+    id = "trailing-whitespace",
+    priority = 10
+  },
+  {
+    id = "mixed-line-ending",
+    args = ["--fix=lf"],
+    priority = 20
+  },
+  {
+    id = "end-of-file-fixer",
+    priority = 30
+  },
+  {
+    id = "detect-private-key",
+    priority = 100
+  },
+  {
+    id = "check-symlinks",
+    priority = 100
+  },
+  {
+    id = "destroyed-symlinks",
+    priority = 100
+  },
+  {
+    id = "check-merge-conflict",
+    priority = 100
+  },
+  {
+    id = "check-json",
+    priority = 100
+  },
+  {
+    id = "check-toml",
+    priority = 100
+  },
+  {
+    id = "check-yaml",
+    priority = 100
+  },
+  {
+    id = "check-shebang-scripts-are-executable",
+    priority = 100
+  },
+  {
+    id = "check-executables-have-shebangs",
+    priority = 100
+  },
+  {
+    id = "check-case-conflict",
+    priority = 100
+  },
+  {
+    id = "fix-byte-order-marker",
+    priority = 100
+  },
+  {
+    id = "check-added-large-files",
+    args = ["--maxkb=1600"],
+    priority = 100
+  }
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.16"
+hooks = [
+  {
+    id = "ruff-check",
+    args = [
+      "--fix",
+      "--exit-non-zero-on-fix"
+    ],
+    priority = 5
+  },
+  {
+    id = "ruff-format",
+    priority = 0
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "deptry",
+    name = "deptry",
+    entry = "uv run deptry .",
+    language = "system",
+    pass_filenames = false,
+    types = ["python"],
+    priority = 100
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "ty",
+    name = "ty type check",
+    entry = "uv run ty check",
+    language = "system",
+    types = ["python"],
+    pass_filenames = false,
+    args = [
+      "src/",
+      "--error-on-warning"
+    ],
+    priority = 100
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "shellcheck",
+    name = "ShellCheck",
+    entry = "shellcheck",
+    language = "system",
+    types = ["shell"],
+    args = ["-x"],
+    priority = 100
+  }
+]
+
+[[repos]]
+repo = "https://github.com/pre-commit/mirrors-prettier"
+rev = "v4.0.0-alpha.8"
+hooks = [
+  {
+    id = "prettier",
+    files = '\.json$',
+    exclude = '^(renovate\.json)$',
+    priority = 0
+  }
+]
+
+[[repos]]
+repo = "https://github.com/hukkin/mdformat"
+rev = "1.0.0"
+hooks = [
+  {
+    id = "mdformat",
+    args = ["--number"],
+    exclude = '^\.github/(skills|instructions)/',
+    additional_dependencies = [
+      "mdformat-gfm",
+      "mdformat-frontmatter"
+    ],
+    priority = 0
+  }
+]
+
+[[repos]]
+repo = "https://github.com/google/yamlfmt"
+rev = "v0.21.0"
+hooks = [
+  {
+    id = "yamlfmt",
+    priority = 0
+  }
+]
+
+[[repos]]
+repo = "https://github.com/antonbabenko/pre-commit-terraform"
+rev = "v1.106.0"
+hooks = [
+  {
+    id = "terraform_fmt",
+    priority = 0
+  },
+  {
+    id = "terraform_tflint",
+    priority = 100
+  },
+  {
+    id = "terraform_validate",
+    priority = 100
+  }
+]
+
+[[repos]]
+repo = "https://github.com/rhysd/actionlint"
+rev = "v1.7.12"
+hooks = [
+  {
+    id = "actionlint",
+    priority = 100
+  }
+]

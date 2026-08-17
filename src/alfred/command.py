@@ -1,21 +1,17 @@
-"""
-Created on Dec 22, 2017
+"""Created on Dec 22, 2017.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import asyncio
 import getpass
 
-from alfred import appkeys
-from alfred import utils
+from alfred import appkeys, utils
 from alfred.main import make_app
 
 
 async def create_admin_user():
-    """
-    Create admin user.
-    """
+    """Create admin user."""
     app = make_app()
     await app[appkeys.database].connect()
     name = input("Name: ")
