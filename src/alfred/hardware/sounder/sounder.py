@@ -1,7 +1,6 @@
-"""
-Created on Jun 7, 2018
+"""Created on Jun 7, 2018
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import asyncio
@@ -10,14 +9,12 @@ import subprocess
 
 from aiohttp import web
 
-
 logger = logging.getLogger(__name__)
 _FILENAMES = ["odi.mp3"]
 
 
 def play_file(filename: str) -> None:
-    """
-    Play file using mpg executable
+    """Play file using mpg executable
     Args:
         filename: sound file to play
     """
@@ -25,18 +22,14 @@ def play_file(filename: str) -> None:
 
 
 class Main(web.View):
-    """
-    Request Handler for "/", render default message
-    """
+    """Request Handler for "/", render default message"""
 
     async def get(self):
         return web.Response(body="hey")
 
 
 class Sound(web.View):
-    """
-    Request Handler for playing sound
-    """
+    """Request Handler for playing sound"""
 
     async def post(self):
         data = await self.post()
@@ -50,9 +43,7 @@ class Sound(web.View):
 
 
 def make_app() -> web.Application:
-    """
-    Create main web app and return it
-    """
+    """Create main web app and return it"""
     app = web.Application()
     app.router.add_view("/", Main)
     app.router.add_view("/play{tail:.*?}", Sound)
@@ -60,9 +51,7 @@ def make_app() -> web.Application:
 
 
 def main() -> None:
-    """
-    Main function
-    """
+    """Main function"""
     logging.basicConfig(
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",

@@ -1,7 +1,6 @@
-"""
-Created on Dec 18, 2017
+"""Created on Dec 18, 2017
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
@@ -14,18 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class Main(web.View):
-    """
-    Request Handler for "/", render default value -1
-    """
+    """Request Handler for "/", render default value -1"""
 
     async def get(self):
         return web.Response(body="-1")
 
 
 class ControlHandler(web.View):
-    """
-    Request Handler for toggling ON/OFF state
-    """
+    """Request Handler for toggling ON/OFF state"""
 
     async def post(self):
         logger.info("got command %s", self.request.path_qs)
@@ -41,9 +36,7 @@ class ControlHandler(web.View):
 
 
 def make_app() -> web.Application:
-    """
-    Create main Tornado app and return it
-    """
+    """Create main Tornado app and return it"""
     app = web.Application()
     app.router.add_view("/", Main)
     app.router.add_view("/turn_on{tail:.*?}", ControlHandler)
@@ -52,9 +45,7 @@ def make_app() -> web.Application:
 
 
 def main() -> None:
-    """
-    Main function
-    """
+    """Main function"""
     logging.basicConfig(
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",

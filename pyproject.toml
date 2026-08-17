@@ -4,31 +4,75 @@ requires = [ "uv-build" ]
 
 [project]
 name = "alfred"
-version = "0.1.0"
+version = "0.1.1"
 description = "Add your description here"
+readme = "README.md"
+authors = [ { name = "iticus", email = "ticus.ionut@gmail.com" } ]
 requires-python = ">=3.14"
-dependencies = [
-    "aiohttp>=3.13.3",
-    "aiohttp-jinja2>=1.6",
-    "aiohttp-session>=2.12.1",
-    "argon2-cffi>=25.1.0",
-    "asyncpg>=0.31.0",
-    "py-vapid>=1.9.4",
-    "pywebpush>=2.3.0",
-    "redis>=7.3.0",
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.14",
 ]
+dependencies = [
+  "aiohttp>=3.13.3",
+  "aiohttp-jinja2>=1.6",
+  "aiohttp-session>=2.12.1",
+  "argon2-cffi>=25.1",
+  "asyncpg>=0.31",
+  "py-vapid>=1.9.4",
+  "python-dotenv>=1.2.3",
+  "pywebpush>=2.3",
+  "redis>=7.3",
+]
+scripts.alfred = "alfred:main"
 
 [dependency-groups]
 dev = [
-    "pytest",
-    "ruff",
-    "ty",
+  "deptry>=0.25.1",
+  "prek>=0.4.14",
+  "pytest",
+  "pytest-asyncio>=1.4",
+  "ruff",
+  "ty",
 ]
 
-[tool.ty.src]
-include = [ "src", "tests" ]
-exclude = [ "src/alfred/hardware/esp8266" ]
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages.find.where = [ "src" ]
+
+[tool.uv]
+default-groups = [ "dev" ]
+sources.alfred = { path = ".", editable = true }
 
 [tool.ruff]
-# Allow lines to be as long as 120.
 line-length = 120
+indent-width = 4
+src = [ "src", "tests" ]
+cache-dir = ".cache/.ruff_cache"
+format.indent-style = "space"
+format.quote-style = "double"
+format.line-ending = "lf"
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "COM812", # missing-trailing-comma
+  "D203",   # incorrect-blank-line-before-class
+  "D213",   # multi-line-summary-first-line
+]
+lint.per-file-ignores."{tests}/**" = [
+  "S101", # assertions
+]
+
+[tool.ty]
+src.include = [ "src", "tests" ]
+src.exclude = [ "src/alfred/hardware/esp8266" ]
+
+[tool.pytest]
+ini_options.pythonpath = "src"
+ini_options.addopts = [
+  "--import-mode=importlib",
+  "--pythonwarnings=error",
+]
+ini_options.asyncio_mode = "auto"
+ini_options.log_cli = true
+ini_options.log_cli_level = "INFO"
+ini_options.log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

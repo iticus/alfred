@@ -53,7 +53,7 @@ navigator.serviceWorker.register('/service-worker.js')
   let rawAuthSecret = subscription.getKey ? subscription.getKey('auth') : '';
   authSecret = rawAuthSecret ? btoa(String.fromCharCode.apply(null, new Uint8Array(rawAuthSecret))) : '';
   endpoint = subscription.endpoint;
-  
+
   fetch('/subscribe', {
     method: 'post',
     credentials: 'include',

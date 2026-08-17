@@ -1,5 +1,4 @@
-"""
-Created on Nov 10, 2019
+"""Created on Nov 10, 2019.
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """

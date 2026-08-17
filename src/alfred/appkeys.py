@@ -1,7 +1,6 @@
-"""
-Created on 2026-03-13
+"""Created on 2026-03-13.
 
-@author: iticus
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import types

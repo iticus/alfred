@@ -1,7 +1,6 @@
-"""
-Created on Dec 16, 2017
+"""Created on Dec 16, 2017
 
-@author: ionut
+Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import machine
