@@ -13,29 +13,30 @@ logger = logging.getLogger(__name__)
 
 
 class DBClient:
-    """Handle database communication using momoko"""
+    """Handle database communication using momoko."""
 
-    def __init__(self, dsn):
+    def __init__(self, dsn: str) -> None:
         self.dsn = dsn
 
     async def connect(self) -> None:
-        """Initialize asyncpg Pool and connect to the database"""
+        """Initialize asyncpg Pool and connect to the database."""
 
         async def init_connection(conn: asyncpg.Connection) -> None:
             await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
-            # await conn.set_type_codec("geometry", encoder=encode_geometry,decoder=decode_geometry, format="binary")
+            # geom use: await conn.set_type_codec("geometry", encoder=encode_geometry,decoder=decode_geometry, format="binary")
 
         self.pool = await asyncpg.create_pool(dsn=self.dsn, min_size=2, max_size=8, init=init_connection)
         logger.info("successfully connected to database")
 
     async def disconnect(self) -> None:
-        """Disconnect from PG and close pool"""
+        """Disconnect from PG and close pool."""
         assert self.pool is not None
         await self.pool.close()
         logger.info("successfully disconnected from database")
 
-    async def get_user(self, username) -> dict | None:
-        """Return first user matching username
+    async def get_user(self, username: str) -> dict | None:
+        """Return first user matching username.
+
         :param username: data to match the username against
         :return user
         """
@@ -43,8 +44,9 @@ class DBClient:
         users = await self.pool.fetch(query, username)
         return dict(users[0]) if users else None
 
-    async def add_subscription(self, subscription):
-        """Add new subscription object
+    async def add_subscription(self, subscription: dict) -> int | None:
+        """Add new subscription object.
+
         :param subscription: subscription info from browser
         :return subscription ID
         """
@@ -64,7 +66,8 @@ class DBClient:
         return result
 
     async def get_subscriptions(self):
-        """Return all subscription objects
+        """Return all subscription objects.
+
         :return subscriptions list
         """
         query = "SELECT id,added_timestamp,endpoint,key,auth_secret FROM subscriptions"
@@ -75,8 +78,9 @@ class DBClient:
             await self.pool.release(conn)
         return [dict(record) for record in records]
 
-    async def get_signals(self, stype=None, signal_id=None):
-        """Return all signals onf stype or all signals if None
+    async def get_signals(self, stype: str | None = None, signal_id: int | None = None) -> list[dict]:
+        """Return all signals onf stype or all signals if None.
+
         :param stype: signal type (sensor, switch, camera)
         :param signal_id: signal ID for this type
         :return: list of signal
@@ -99,30 +103,34 @@ class DBClient:
             return []
         return [dict(record) for record in records]
 
-    async def get_sensor_signals(self):
-        """Get sensor signal data
+    async def get_sensor_signals(self) -> list[dict]:
+        """Retrieve sensor signal data.
+
         :returns: list of sensor signals
         """
         sensors = await self.get_signals("sensor")
         return sensors
 
-    async def get_switch_signals(self, signal_id=None):
-        """Get switch signal data
+    async def get_switch_signals(self, signal_id: int | None = None) -> list[dict]:
+        """Retrieve switch signal data.
+
         :param signal_id: signal ID
         :returns: list of switch signals
         """
         switches = await self.get_signals("switch", signal_id)
         return switches
 
-    async def get_sound_signals(self):
-        """Get sound signal data
+    async def get_sound_signals(self) -> list[dict]:
+        """Retrieve sound signal data.
+
         :returns: list of sound signals
         """
         sounds = await self.get_signals("sound")
         return sounds
 
-    async def get_camera_signals(self, signal_id=None):
-        """Get camera signal data
+    async def get_camera_signals(self, signal_id: int | None = None) -> list[dict]:
+        """Retrieve camera signal data.
+
         :param signal_id: signal ID
         :returns: list of camera signals
         """

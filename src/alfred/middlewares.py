@@ -4,7 +4,10 @@ Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
-from collections.abc import Callable
+import typing
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Callable
 
 import aiohttp_jinja2
 from aiohttp import web, web_exceptions
@@ -14,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 @web.middleware
 async def error_middleware(request: web.Request, handler: Callable) -> web.Response:
-    """Try to handle the request and render a custom error page if an exception occurs
+    """Try to handle the request and render a custom error page if an exception occurs.
+
     :param request: web Request to handle
     :param handler: handler to execute
     :return: web response object

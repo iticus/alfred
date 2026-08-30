@@ -24,12 +24,13 @@ logger = logging.getLogger(__name__)
 
 
 async def startup(app: web.Application) -> None:
-    """Establish database and cache connections
+    """Establish database and cache connections.
+
     :param app: application instance
     """
     logger.info("connecting to database")
     await app[appkeys.database].connect()
-    # await app.database.create_structure()
+    # not needed: await app.database.create_structure()
     logger.info("connecting to REDIS instance")
     app[appkeys.cache] = redis.Redis(
         host=app[appkeys.config].REDIS_HOST,
@@ -44,7 +45,8 @@ async def startup(app: web.Application) -> None:
 
 
 async def shutdown(app: web.Application) -> None:
-    """Gracefully disconnect from database and cache servers
+    """Gracefully disconnect from database and cache servers.
+
     :param app: application instance
     """
     logger.info("disconnecting from database")
@@ -54,12 +56,13 @@ async def shutdown(app: web.Application) -> None:
     await asyncio.sleep(0.1)
 
 
-async def run_control(app: web.Application):
-    """Run control function to retrieve signal values and process schedules
-    :param app: tornado application instance
+async def run_control(app: web.Application) -> None:
+    """Run control function to retrieve signal values and process schedules.
+
+    :param app: aiohttp application instance
     """
     while True:
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(tz=datetime.UTC)
         one_day = datetime.timedelta(hours=24)
         try:
             logger.debug("running control loop")
@@ -68,7 +71,7 @@ async def run_control(app: web.Application):
             logger.exception("cannot run control loop")
             subscriptions = await app[appkeys.database].get_subscriptions()
             tasks = {}
-            payload = "cannot run control code: %s" % exc
+            payload = f"cannot run control code: {exc}"
             for subscription in subscriptions:
                 key = f"{subscription['id']}"
                 if (
@@ -86,13 +89,14 @@ async def run_control(app: web.Application):
                     if result:
                         logger.info("subscription %s, result %s", tasks[task], result)
                 except Exception as exc:
-                    logging.exception("subscription %s, exception %s", tasks[task], exc)
+                    logger.exception("subscription %s, exception %s", tasks[task], exc)
         finally:
             await asyncio.sleep(30)
 
 
 def make_app():
-    """Create and return tornado.web.Application object so it can be used in tests too
+    """Create and return aiohttp.web.Application object so it can be used in tests too.
+
     :param io_loop: already existing io_loop (used for testing)
     :returns: application instance
     """
@@ -121,9 +125,9 @@ def make_app():
 
 
 def main() -> None:
-    """Start main web application instance"""
+    """Start main web application instance."""
     application = make_app()
-    logging.info(
+    logger.info(
         "starting alfred on %s:%s",
         application[appkeys.config].ADDRESS,
         application[appkeys.config].PORT,

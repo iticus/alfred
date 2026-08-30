@@ -27,7 +27,8 @@ class BaseView(web.View):
 
     @staticmethod
     def authenticated(func: Callable) -> Callable:
-        """Decorator for checking authentication for requests
+        """Check authentication decorator.
+
         :param func: function to decorate
         :return: decorator
         """
@@ -43,7 +44,7 @@ class BaseView(web.View):
 
 
 class Login(BaseView):
-    """Handle login page and POST request"""
+    """Handle login page and POST request."""
 
     async def get(self) -> web.Response:
         message = self.request.query.get("message")
@@ -69,7 +70,7 @@ class Login(BaseView):
 
 
 class Logout(BaseView):
-    """Logout user"""
+    """Logout user."""
 
     @BaseView.authenticated
     async def post(self) -> web.Response:
@@ -79,7 +80,7 @@ class Logout(BaseView):
 
 
 class Home(BaseView):
-    """Request Handler for "/", render home template"""
+    """Request Handler for "/", render home template."""
 
     @BaseView.authenticated
     async def get(self):
@@ -91,7 +92,8 @@ class Home(BaseView):
 
 
 class Sensors(BaseView):
-    """Request Handler for "/sensors"
+    """Request Handler for "/sensors".
+
     Available methods: GET
     """
 
@@ -105,13 +107,14 @@ class Sensors(BaseView):
 
 
 class Switches(BaseView):
-    """Request Handler for "/switches"
+    """Request Handler for "/switches".
+
     Available methods: GET, POST
     """
 
     @BaseView.authenticated
     async def get(self):
-        """Return all switches data"""
+        """Return all switches data."""
         switches = await self.database.get_switch_signals()
         for switch in switches:
             switch["value"] = await self.cache.get(f"{switch['id']}")
@@ -119,7 +122,7 @@ class Switches(BaseView):
 
     @BaseView.authenticated
     async def post(self):
-        """Toggle switch"""
+        """Toggle switch."""
         data = await self.post()
         sid = data.get("sid", "0")
         signals = await self.database.get_switch_signals(int(sid))
@@ -133,19 +136,20 @@ class Switches(BaseView):
 
 
 class Sounds(BaseView):
-    """Request Handler for "/sounds"
+    """Request Handler for "/sounds".
+
     Available methods: GET, POST
     """
 
     @BaseView.authenticated
     async def get(self):
-        """Return all sound data"""
+        """Return all sound data."""
         sounds = await self.database.get_sound_signals()
         return web.json_response({"status": "ok", "sounds": sounds})
 
     @BaseView.authenticated
     async def post(self):
-        """Play sound"""
+        """Play sound."""
         url = self.request.query.get("url")
         response = await utils.play_sound(url)
         if response != "ok":
@@ -154,19 +158,20 @@ class Sounds(BaseView):
 
 
 class Cameras(BaseView):
-    """Request Handler for "/cameras/"
+    """Request Handler for "/cameras/".
+
     Available methods: GET
     """
 
     @BaseView.authenticated
     async def get(self):
-        """Return all available cameras"""
+        """Return all available cameras."""
         cameras = await self.database.get_camera_signals()
         return web.json_response({"status": "ok", "cameras": cameras})
 
 
 class VideoHTTP(BaseView):
-    """Request Handler for "/http_video/" """
+    """Request Handler for "/http_video/" ."""
 
     def open(self):
         logging.info("new http_video client %s", self)
@@ -259,13 +264,14 @@ async def websocket_handler(request):
 
 
 class Subscribe(BaseView):
-    """Request Handler for "/subscribe" - handle push subscribe requests
+    """Request Handler for "/subscribe" - handle push subscribe requests.
+
     Available methods: POST
     """
 
     @BaseView.authenticated
     async def post(self):
-        """Add new subscription info"""
+        """Add new subscription info."""
         subscription = await self.post()
         result = await self.database.add_subscription(subscription)
         if not result:
@@ -274,14 +280,14 @@ class Subscribe(BaseView):
 
 
 class ServiceWorker(web.View):
-    """Render static service worker file"""
+    """Render static service worker file."""
 
     async def get(self) -> web.FileResponse:
         return FileResponse("static/service-worker.js")
 
 
 class Favicon(web.View):
-    """Render static favicon file"""
+    """Render static favicon file."""
 
     async def get(self) -> web.FileResponse:
         return FileResponse("static/favicon.png")
