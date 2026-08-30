@@ -9,6 +9,7 @@ import time
 from urllib.parse import urlparse
 
 import aiohttp.client
+from aiohttp import web
 from argon2 import PasswordHasher, exceptions
 from py_vapid import Vapid
 from pywebpush import WebPusher
@@ -18,8 +19,9 @@ from alfred import appkeys
 logger = logging.getLogger(__name__)
 
 
-def time_to_minutes(time_value):
-    """Convert a HH:MM string value to number of minutes since 00:00
+def time_to_minutes(time_value: str) -> int:
+    """Convert a HH:MM string value to number of minutes since 00:00.
+
     :param time_value: hours:minutes value to convert
     :return: number of minutes since 00:00
     """
@@ -27,14 +29,15 @@ def time_to_minutes(time_value):
     return int(parts[0]) * 60 + int(parts[1])
 
 
-async def control(app):
-    """Retrieve signal value and check that schedules are implemented
-    :param app: tornado application instance
+async def control(app: web.Application):
+    """Retrieve signal value and check that schedules are implemented.
+
+    :param app: aiohttp application instance
     """
     error_msg = ""
     client = aiohttp.client.ClientSession()
     signals = await app[appkeys.database].get_signals()
-    now = datetime.datetime.now()
+    now = datetime.datetime.now().astimezone()
     now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
         if not signal["active"]:
@@ -58,32 +61,33 @@ async def control(app):
             app[appkeys.cache][signal["id"]] = value
             continue
         # Handle switch value and schedule
-        app.cache[signal["id"]] = True if value in ["1", "1,1"] else False
+        app[appkeys.cache][signal["id"]] = value in ["1", "1,1"]
         if signal["attributes"].get("schedule", None):
             start_time = signal["attributes"]["schedule"]["start"]
             start_time = time_to_minutes(start_time)
             stop_time = signal["attributes"]["schedule"]["stop"]
             stop_time = time_to_minutes(stop_time)
             if start_time <= stop_time:
-                if start_time <= now_minutes < stop_time and not app.cache[signal["id"]]:
+                if start_time <= now_minutes < stop_time and not app[appkeys.cache][signal["id"]]:
                     await control_switch(signal, "1")
-                    app.cache[signal["id"]] = True
-                elif not (start_time <= now_minutes < stop_time) and app.cache[signal["id"]]:
+                    app[appkeys.cache][signal["id"]] = True
+                elif not (start_time <= now_minutes < stop_time) and app[appkeys.cache][signal["id"]]:
                     await control_switch(signal, "0")
-                    app.cache[signal["id"]] = False
-            elif stop_time <= now_minutes < start_time and app.cache[signal["id"]]:
+                    app[appkeys.cache][signal["id"]] = False
+            elif stop_time <= now_minutes < start_time and app[appkeys.cache][signal["id"]]:
                 await control_switch(signal, "0")
-                app.cache[signal["id"]] = False
-            elif not (stop_time <= now_minutes < start_time) and not app.cache[signal["id"]]:
+                app[appkeys.cache][signal["id"]] = False
+            elif not (stop_time <= now_minutes < start_time) and not app[appkeys.cache][signal["id"]]:
                 await control_switch(signal, "1")
-                app.cache[signal["id"]] = True
+                app[appkeys.cache][signal["id"]] = True
     await client.close()
     if error_msg:
         raise Exception(error_msg)
 
 
-async def control_switch(signal, state):
-    """Turn switch on or off
+async def control_switch(signal: dict, state: str) -> str:
+    """Turn switch on or off and return new state.
+
     :param signal: signal to make handle
     :param state: desired state ("0" or "1")
     :return: decoded response body from POST request
@@ -110,8 +114,9 @@ async def control_switch(signal, state):
     return data
 
 
-async def play_sound(url):
-    """Play sound using url
+async def play_sound(url: str) -> str:
+    """Play sound using url.
+
     :param url: sounder URL to make the POST request to
     :return: decoded response body from POST request
     """
@@ -123,17 +128,18 @@ async def play_sound(url):
 
 
 def make_pw_hash(password: str) -> str:
-    """Generate argon2 password hash
+    """Generate argon2 password hash.
+
     :param password: password text to be hashed
     :returns: password hash
     """
     password_hasher = PasswordHasher()
-    pw_hash = password_hasher.hash(password)
-    return pw_hash
+    return password_hasher.hash(password)
 
 
 def compare_pwhash(pw_hash: str, password: str) -> bool:
-    """Compute hash for current password and compare it to pw_hash
+    """Compute hash for current password and compare it to pw_hash.
+
     :param pw_hash: previously generated pw_hash to be compared
     :param password: password text to compute hash for
     :returns: True or False
@@ -153,8 +159,9 @@ def compare_pwhash(pw_hash: str, password: str) -> bool:
     return True
 
 
-def generate_vapid_headers(private_key_data, endpoint):
-    """Generate vapid headers for web push call
+def generate_vapid_headers(private_key_data: str, endpoint: str) -> dict:
+    """Generate vapid headers for web push call.
+
     :param private_key_data: private key string data
     :param endpoint: endpoint URL from subscription info
     :return: vapid Authorization header
@@ -171,10 +178,11 @@ def generate_vapid_headers(private_key_data, endpoint):
     return headers
 
 
-async def send_push_notification(payload, config, subscription):
-    """Send push notification using subscription info (url and keys)
+async def send_push_notification(payload: str, config: dict, subscription: dict) -> int:
+    """Send push notification using subscription info (url and keys).
+
     :param payload: payload (usable) data to be sent
-    :param config: configuration information from Tornado app
+    :param config: configuration information from aiohttp app
     :param subscription: subscription info dict (keys, endpoint)
     :return: POST request result status code
     """

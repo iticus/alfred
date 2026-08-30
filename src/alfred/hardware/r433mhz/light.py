@@ -1,4 +1,4 @@
-"""Created on Dec 18, 2017
+"""Created on Dec 18, 2017.
 
 Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
@@ -13,21 +13,21 @@ logger = logging.getLogger(__name__)
 
 
 class Main(web.View):
-    """Request Handler for "/", render default value -1"""
+    """Request Handler for "/", render default value -1."""
 
     async def get(self):
         return web.Response(body="-1")
 
 
 class ControlHandler(web.View):
-    """Request Handler for toggling ON/OFF state"""
+    """Request Handler for toggling ON/OFF state."""
 
     async def post(self):
         logger.info("got command %s", self.request.path_qs)
         cmd = quote("sudo r433mhz 11111 1 0")
         proc = await subprocess.create_subprocess_shell(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = await proc.communicate()
-        logger.debug("%s exited with", cmd, proc.returncode)
+        logger.debug("%s exited with %s", cmd, proc.returncode)
         if stdout:
             logger.info("command stdout %s", stdout)
         if stderr:
@@ -36,7 +36,7 @@ class ControlHandler(web.View):
 
 
 def make_app() -> web.Application:
-    """Create main Tornado app and return it"""
+    """Create main aiohttp app and return it."""
     app = web.Application()
     app.router.add_view("/", Main)
     app.router.add_view("/turn_on{tail:.*?}", ControlHandler)
@@ -45,7 +45,7 @@ def make_app() -> web.Application:
 
 
 def main() -> None:
-    """Main function"""
+    """Create and run webapp."""
     logging.basicConfig(
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",

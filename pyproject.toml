@@ -19,6 +19,7 @@ dependencies = [
   "aiohttp-session>=2.12.1",
   "argon2-cffi>=25.1",
   "asyncpg>=0.31",
+  "jinja2>=3.1.6",
   "py-vapid>=1.9.4",
   "python-dotenv>=1.2.3",
   "pywebpush>=2.3",
@@ -43,6 +44,7 @@ packages.find.where = [ "src" ]
 [tool.uv]
 default-groups = [ "dev" ]
 sources.alfred = { path = ".", editable = true }
+package = true
 
 [tool.ruff]
 line-length = 120
@@ -61,6 +63,9 @@ lint.ignore = [
 lint.per-file-ignores."{tests}/**" = [
   "S101", # assertions
 ]
+
+[tool.deptry]
+known_first_party = [ "alfred" ]
 
 [tool.ty]
 src.include = [ "src", "tests" ]
