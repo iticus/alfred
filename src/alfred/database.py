@@ -6,6 +6,7 @@ Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 import datetime
 import json
 import logging
+from typing import Any
 
 import asyncpg
 
@@ -16,6 +17,10 @@ class DBClient:
     """Handle database communication using momoko."""
 
     def __init__(self, dsn: str) -> None:
+        """Create instance and assign DSN attribute.
+
+        :param dsn: database connection string
+        """
         self.dsn = dsn
 
     async def connect(self) -> None:
@@ -23,14 +28,16 @@ class DBClient:
 
         async def init_connection(conn: asyncpg.Connection) -> None:
             await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
-            # geom use: await conn.set_type_codec("geometry", encoder=encode_geometry,decoder=decode_geometry, format="binary")
+            # _await conn.set_type_codec("geometry", encoder=encode_geometry,decoder=decode_geometry, format="binary")
 
         self.pool = await asyncpg.create_pool(dsn=self.dsn, min_size=2, max_size=8, init=init_connection)
         logger.info("successfully connected to database")
 
     async def disconnect(self) -> None:
         """Disconnect from PG and close pool."""
-        assert self.pool is not None
+        if self.pool is None:
+            logger.warning("database pool is not initialized")
+            return
         await self.pool.close()
         logger.info("successfully disconnected from database")
 
@@ -65,7 +72,7 @@ class DBClient:
             await self.pool.release(conn)
         return result
 
-    async def get_subscriptions(self):
+    async def get_subscriptions(self) -> list[dict[str, Any]]:
         """Return all subscription objects.
 
         :return subscriptions list
@@ -78,7 +85,7 @@ class DBClient:
             await self.pool.release(conn)
         return [dict(record) for record in records]
 
-    async def get_signals(self, stype: str | None = None, signal_id: int | None = None) -> list[dict]:
+    async def get_signals(self, stype: str | None = None, signal_id: int | None = None) -> list[dict[str, Any]]:
         """Return all signals onf stype or all signals if None.
 
         :param stype: signal type (sensor, switch, camera)
@@ -108,8 +115,7 @@ class DBClient:
 
         :returns: list of sensor signals
         """
-        sensors = await self.get_signals("sensor")
-        return sensors
+        return await self.get_signals("sensor")
 
     async def get_switch_signals(self, signal_id: int | None = None) -> list[dict]:
         """Retrieve switch signal data.
@@ -117,16 +123,14 @@ class DBClient:
         :param signal_id: signal ID
         :returns: list of switch signals
         """
-        switches = await self.get_signals("switch", signal_id)
-        return switches
+        return await self.get_signals("switch", signal_id)
 
     async def get_sound_signals(self) -> list[dict]:
         """Retrieve sound signal data.
 
         :returns: list of sound signals
         """
-        sounds = await self.get_signals("sound")
-        return sounds
+        return await self.get_signals("sound")
 
     async def get_camera_signals(self, signal_id: int | None = None) -> list[dict]:
         """Retrieve camera signal data.
@@ -134,5 +138,4 @@ class DBClient:
         :param signal_id: signal ID
         :returns: list of camera signals
         """
-        cameras = await self.get_signals("camera", signal_id)
-        return cameras
+        return await self.get_signals("camera", signal_id)
