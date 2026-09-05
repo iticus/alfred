@@ -4,8 +4,7 @@ Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp.client
 import aiohttp_jinja2
@@ -15,11 +14,20 @@ from aiohttp_session import get_session, new_session
 
 from alfred import appkeys, utils
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
+
 
 class BaseView(web.View):
-    """Base View to be inherited / implemented by subsequent views"""
+    """Base View to be inherited / implemented by subsequent views."""
 
     def __init__(self, request: web.Request) -> None:
+        """Create instance and assign DSN attribute.
+
+        :param request: web request
+        """
         super().__init__(request)
         self.config = self.request.app[appkeys.config]
         self.database = self.request.app[appkeys.database]
@@ -47,19 +55,20 @@ class Login(BaseView):
     """Handle login page and POST request."""
 
     async def get(self) -> web.Response:
+        """Render login page with optional error message."""
         message = self.request.query.get("message")
         next_url = self.request.query.get("next", "/")
         context = {"message": message, "next_url": next_url}
         return aiohttp_jinja2.render_template("login.html", self.request, context=context)
 
     async def post(self) -> web.Response:
+        """Handle login request."""
         data = await self.request.post()
         if data.get("username") and data.get("password"):
             user = await self.database.get_user(data["username"])
             if not user:
                 return web.HTTPFound(location="/login?message=no such user found")
-            assert isinstance(data["password"], str), "invalid password"
-            if not utils.compare_pwhash(user["password"], data["password"]):
+            if not isinstance(data["password"], str) or not utils.compare_pwhash(user["password"], data["password"]):
                 return web.HTTPFound(location="/login?message=invalid password")
         else:
             return web.HTTPFound(location="/login?message=provide username and password")
@@ -74,6 +83,7 @@ class Logout(BaseView):
 
     @BaseView.authenticated
     async def post(self) -> web.Response:
+        """Handle logout request."""
         session = await get_session(self.request)
         session.invalidate()
         return web.HTTPFound(location="/")
@@ -83,7 +93,8 @@ class Home(BaseView):
     """Request Handler for "/", render home template."""
 
     @BaseView.authenticated
-    async def get(self):
+    async def get(self) -> web.Response:
+        """Render home page."""
         context = {
             "vapid_public_key": self.config.VAPID_PUBLIC_KEY,
             "session": self.session,
@@ -98,8 +109,8 @@ class Sensors(BaseView):
     """
 
     @BaseView.authenticated
-    async def get(self):
-        """Return all switches data"""
+    async def get(self) -> web.Response:
+        """Return all sensor data."""
         sensors = await self.database.get_sensor_signals()
         for sensor in sensors:
             sensor["value"] = await self.cache.get(sensor["id"])
@@ -113,7 +124,7 @@ class Switches(BaseView):
     """
 
     @BaseView.authenticated
-    async def get(self):
+    async def get(self) -> web.Response:
         """Return all switches data."""
         switches = await self.database.get_switch_signals()
         for switch in switches:
@@ -121,7 +132,7 @@ class Switches(BaseView):
         return web.json_response({"status": "ok", "switches": switches})
 
     @BaseView.authenticated
-    async def post(self):
+    async def post(self) -> web.Response:
         """Toggle switch."""
         data = await self.post()
         sid = data.get("sid", "0")
@@ -142,15 +153,17 @@ class Sounds(BaseView):
     """
 
     @BaseView.authenticated
-    async def get(self):
+    async def get(self) -> web.Response:
         """Return all sound data."""
         sounds = await self.database.get_sound_signals()
         return web.json_response({"status": "ok", "sounds": sounds})
 
     @BaseView.authenticated
-    async def post(self):
+    async def post(self) -> web.Response:
         """Play sound."""
         url = self.request.query.get("url")
+        if not url:
+            return web.json_response({"status": "error", "message": "missing URL"}, status=400)
         response = await utils.play_sound(url)
         if response != "ok":
             return web.json_response({"status": "error"}, status=500)
@@ -164,7 +177,7 @@ class Cameras(BaseView):
     """
 
     @BaseView.authenticated
-    async def get(self):
+    async def get(self) -> web.Response:
         """Return all available cameras."""
         cameras = await self.database.get_camera_signals()
         return web.json_response({"status": "ok", "cameras": cameras})
@@ -173,37 +186,44 @@ class Cameras(BaseView):
 class VideoHTTP(BaseView):
     """Request Handler for "/http_video/" ."""
 
-    def open(self):
-        logging.info("new http_video client %s", self)
+    def open(self) -> None:
+        """Handle new http video request."""
+        logger.info("new http_video client %s", self)
         if not self.get_secure_cookie("username"):
-            logging.warning("received non-aunthenticated connection")
+            logger.warning("received non-aunthenticated connection")
             return self.close()
         self.url = self.request.get("url", None)
         if not self.url:
             return self.close()
         self.client = aiohttp.client.ClientSession()
+        return None
 
-    def on_close(self):
-        logging.info("removing ws http_video client %s", self)
+    def on_close(self) -> None:
+        """Handle http video closing."""
+        logger.info("removing ws http_video client %s", self)
 
-    async def on_message(self, message):
+    async def on_message(self, message: str) -> None:
+        """Handle message on websocket connection."""
         try:
             if message == "?":
                 image = await self.client.get(self.url)
                 self.write_message(image.body, binary=True)
             elif message == "!":
-                logging.info("closing websocket by client request")
+                logger.info("closing websocket by client request")
                 self.close()
             else:
                 self.write_message(message)  # echo
-        except Exception as exc:
-            logging.exception("cannot handle mjpeg data %s", exc)
+        except Exception:
+            logger.exception("cannot handle mjpeg data")
             self.close()
 
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+    """Handle websocket connection.
 
-async def websocket_handler(request):
+    :param request: web request to handle
+    """
     ws = web.WebSocketResponse()
-    await ws.prepare(request)
+    _ = await ws.prepare(request)
     url = request.query.get("url", None)
     if not url:
         return ws
@@ -224,44 +244,42 @@ async def websocket_handler(request):
             else:
                 await ws.send_str(msg.data + "/answer")
         elif msg.type == aiohttp.WSMsgType.ERROR:
-            print("ws connection closed with exception %s" % ws.exception())
-
-    print("websocket connection closed")
-
+            logger.error("ws connection closed with exception %s", ws.exception())
+    logger.info("websocket connection closed")
     return ws
 
 
-#
-# class VideoWS(BaseView):
-#     """
-#     Request Handler for "/ws_video/"
-#     """
-#
-#     async def open(self):
-#         logging.info("new ws_video client %s", self)
-#         if not self.get_secure_cookie("username"):
-#             logging.warning("received non-aunthenticated ws connection")
-#             return self.close()
-#
-#         self.upstream = await websocket_connect(url, on_message_callback=self.upstream_message)
-#
-#     def on_close(self):
-#         self.upstream.close()
-#         logging.info("removing ws_video client %s", self)
-#
-#     def on_message(self, message):
-#         if message == "!":
-#             logging.info("closing websocket by client request")
-#             self.close()
-#         elif message != "?":
-#             logging.info("got ws message %s from %s", message, self)
-#
-#     def upstream_message(self, message):
-#         try:
-#             self.write_message(message, binary=True)
-#         except WebSocketClosedError:
-#             self.close()
+'''
+class VideoWS(BaseView):
+    """
+    Request Handler for "/ws_video/"
+    """
 
+    async def open(self):
+        logging.info("new ws_video client %s", self)
+        if not self.get_secure_cookie("username"):
+            logging.warning("received non-aunthenticated ws connection")
+            return self.close()
+
+        self.upstream = await websocket_connect(url, on_message_callback=self.upstream_message)
+
+    def on_close(self):
+        self.upstream.close()
+        logging.info("removing ws_video client %s", self)
+
+    def on_message(self, message):
+        if message == "!":
+            logging.info("closing websocket by client request")
+            self.close()
+        elif message != "?":
+            logging.info("got ws message %s from %s", message, self)
+
+    def upstream_message(self, message):
+        try:
+            self.write_message(message, binary=True)
+        except WebSocketClosedError:
+            self.close()
+'''
 
 class Subscribe(BaseView):
     """Request Handler for "/subscribe" - handle push subscribe requests.
@@ -270,7 +288,7 @@ class Subscribe(BaseView):
     """
 
     @BaseView.authenticated
-    async def post(self):
+    async def post(self) -> web.Response:
         """Add new subscription info."""
         subscription = await self.post()
         result = await self.database.add_subscription(subscription)
@@ -283,6 +301,7 @@ class ServiceWorker(web.View):
     """Render static service worker file."""
 
     async def get(self) -> web.FileResponse:
+        """Render static service worker file."""
         return FileResponse("static/service-worker.js")
 
 
@@ -290,4 +309,5 @@ class Favicon(web.View):
     """Render static favicon file."""
 
     async def get(self) -> web.FileResponse:
+        """Render static favicon file."""
         return FileResponse("static/favicon.png")

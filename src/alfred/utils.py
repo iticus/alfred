@@ -6,6 +6,7 @@ Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 import datetime
 import logging
 import time
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import aiohttp.client
@@ -15,6 +16,10 @@ from py_vapid import Vapid
 from pywebpush import WebPusher
 
 from alfred import appkeys
+from alfred.exceptions import ControlError
+
+if TYPE_CHECKING:
+    import types
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +34,7 @@ def time_to_minutes(time_value: str) -> int:
     return int(parts[0]) * 60 + int(parts[1])
 
 
-async def control(app: web.Application):
+async def control(app: web.Application) -> None:
     """Retrieve signal value and check that schedules are implemented.
 
     :param app: aiohttp application instance
@@ -82,10 +87,10 @@ async def control(app: web.Application):
                 app[appkeys.cache][signal["id"]] = True
     await client.close()
     if error_msg:
-        raise Exception(error_msg)
+        raise ControlError(error_msg)
 
 
-async def control_switch(signal: dict, state: str) -> str:
+async def control_switch(signal: dict[str, Any], state: str) -> str:
     """Turn switch on or off and return new state.
 
     :param signal: signal to make handle
@@ -123,8 +128,7 @@ async def play_sound(url: str) -> str:
     logger.info("playing sound for URL %s", url)
     client = aiohttp.client.ClientSession()
     response = await client.request(method="POST", url=url, body="{}")
-    data = await response.text()
-    return data
+    return await response.text()
 
 
 def make_pw_hash(password: str) -> str:
@@ -148,18 +152,20 @@ def compare_pwhash(pw_hash: str, password: str) -> bool:
     try:
         password_hasher.verify(pw_hash, password)
         # check rehash
-        # needs_rehash = False
-        # if result:
-        #     needs_rehash = ph.check_needs_rehash(pw_hash)
+        """
+        needs_rehash = False
+        if result:
+            needs_rehash = ph.check_needs_rehash(pw_hash)
+        """
     except exceptions.VerifyMismatchError:
         return False
     except exceptions.InvalidHash:
-        logger.error("tried to decode invalid hash: %s", password)
+        logger.exception("tried to decode invalid hash: %s", password)
         return False
     return True
 
 
-def generate_vapid_headers(private_key_data: str, endpoint: str) -> dict:
+def generate_vapid_headers(private_key_data: str, endpoint: str) -> dict[str, str]:
     """Generate vapid headers for web push call.
 
     :param private_key_data: private key string data
@@ -174,11 +180,10 @@ def generate_vapid_headers(private_key_data: str, endpoint: str) -> dict:
         "sub": "mailto:ticus.ionut@gmail.com",
     }
     vapid_key = Vapid.from_pem(private_key=private_key_data.encode())
-    headers = vapid_key.sign(vapid_claims)
-    return headers
+    return vapid_key.sign(vapid_claims)
 
 
-async def send_push_notification(payload: str, config: dict, subscription: dict) -> int:
+async def send_push_notification(payload: str, config: types.ModuleType, subscription: dict[str, str]) -> int:
     """Send push notification using subscription info (url and keys).
 
     :param payload: payload (usable) data to be sent

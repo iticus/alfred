@@ -7,7 +7,7 @@ import logging
 import typing
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
 import aiohttp_jinja2
 from aiohttp import web, web_exceptions
@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 @web.middleware
-async def error_middleware(request: web.Request, handler: Callable) -> web.Response:
+async def error_middleware(
+    request: web.Request, handler: Callable[[web.Request], Awaitable[web.Response]]
+) -> web.Response:
     """Try to handle the request and render a custom error page if an exception occurs.
 
     :param request: web Request to handle
@@ -25,7 +27,7 @@ async def error_middleware(request: web.Request, handler: Callable) -> web.Respo
     """
     try:
         response = await handler(request)
-        if response.status != 500:
+        if response.status != web.HTTPInternalServerError.status_code:
             return response
         message = response.message
     except web_exceptions.HTTPNotFound:

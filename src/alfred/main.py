@@ -89,35 +89,35 @@ async def run_control(app: web.Application) -> None:
                     if result:
                         logger.info("subscription %s, result %s", tasks[task], result)
                 except Exception as exc:
-                    logger.exception("subscription %s, exception %s", tasks[task], exc)
+                    logger.exception("cannot send notitication for subscription %s", tasks[task])
         finally:
             await asyncio.sleep(30)
 
 
-def make_app():
+def make_app() -> web.Application:
     """Create and return aiohttp.web.Application object so it can be used in tests too.
 
     :param io_loop: already existing io_loop (used for testing)
     :returns: application instance
     """
     app = web.Application()
-    (app.router.add_view("/", views.Home),)
-    app.router.add_view(r"/login{tail:.*?}", views.Login)
-    app.router.add_view(r"/logout{tail:.*?}", views.Logout)
-    app.router.add_view(r"/sensors{tail:.*?}", views.Sensors)
-    app.router.add_view(r"/switches{tail:.*?}", views.Switches)
-    app.router.add_view(r"/sounds{tail:.*?}", views.Sounds)
-    app.router.add_view(r"/cameras{tail:.*?}", views.Cameras)
-    app.router.add_view(r"/http_video{tail:.*?}", views.VideoHTTP)
-    app.router.add_view(r"/subscribe{tail:.*?}", views.Subscribe)
-    app.router.add_static("/static", Path(__file__).parent / "static")
-    app.router.add_view("/favicon.ico", views.Favicon)
-    app.router.add_view("/service-worker.js", views.ServiceWorker)
-    app.router.add_route("get", "/ws_video{tail:.*?}", views.websocket_handler)
-    app.middlewares.append(error_middleware)
+    _ = app.router.add_view("/", views.Home)
+    _ = app.router.add_view(r"/login{tail:.*?}", views.Login)
+    _ = app.router.add_view(r"/logout{tail:.*?}", views.Logout)
+    _ = app.router.add_view(r"/sensors{tail:.*?}", views.Sensors)
+    _ = app.router.add_view(r"/switches{tail:.*?}", views.Switches)
+    _ = app.router.add_view(r"/sounds{tail:.*?}", views.Sounds)
+    _ = app.router.add_view(r"/cameras{tail:.*?}", views.Cameras)
+    _ = app.router.add_view(r"/http_video{tail:.*?}", views.VideoHTTP)
+    _ = app.router.add_view(r"/subscribe{tail:.*?}", views.Subscribe)
+    _ = app.router.add_static("/static", Path(__file__).parent / "static")
+    _ = app.router.add_view("/favicon.ico", views.Favicon)
+    _ = app.router.add_view("/service-worker.js", views.ServiceWorker)
+    _ = app.router.add_route("get", "/ws_video{tail:.*?}", views.websocket_handler)
+    _ = app.middlewares.append(error_middleware)
     app[appkeys.config] = settings
     app[appkeys.database] = DBClient(settings.DSN)
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(Path(__file__).parent / "templates"))
+    _ = aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(Path(__file__).parent / "templates"))
     app.on_startup.append(startup)
     app.on_shutdown.append(shutdown)
 
