@@ -4,7 +4,7 @@ Copyright (C) 2026, Ionut Ticus (iticus), <ticus.ionut@gmail.com>
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
 
 import aiohttp.client
 import aiohttp_jinja2
@@ -13,9 +13,6 @@ from aiohttp.web_fileresponse import FileResponse
 from aiohttp_session import get_session, new_session
 
 from alfred import appkeys, utils
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +29,6 @@ class BaseView(web.View):
         self.config = self.request.app[appkeys.config]
         self.database = self.request.app[appkeys.database]
         self.cache = self.request.app[appkeys.cache]
-
-    @staticmethod
-    def authenticated(func: Callable) -> Callable:
-        """Check authentication decorator.
-
-        :param func: function to decorate
-        :return: decorator
-        """
-
-        async def wrapper(self: web.Request, *args: Any, **kwargs: Any) -> Any:
-            self.session = await get_session(self.request)
-            if "username" not in self.session:
-                next_url = self.request.rel_url or "/"
-                return web.HTTPFound(f"/login?next={next_url}")
-            return await func(self, *args, **kwargs)
-
-        return wrapper
 
 
 class Login(BaseView):
@@ -81,7 +61,6 @@ class Login(BaseView):
 class Logout(BaseView):
     """Logout user."""
 
-    @BaseView.authenticated
     async def post(self) -> web.Response:
         """Handle logout request."""
         session = await get_session(self.request)
@@ -92,12 +71,11 @@ class Logout(BaseView):
 class Home(BaseView):
     """Request Handler for "/", render home template."""
 
-    @BaseView.authenticated
     async def get(self) -> web.Response:
         """Render home page."""
         context = {
             "vapid_public_key": self.config.VAPID_PUBLIC_KEY,
-            "session": self.session,
+            "session": self.request.session,
         }
         return aiohttp_jinja2.render_template("home.html", self.request, context=context)
 
@@ -108,7 +86,6 @@ class Sensors(BaseView):
     Available methods: GET
     """
 
-    @BaseView.authenticated
     async def get(self) -> web.Response:
         """Return all sensor data."""
         sensors = await self.database.get_sensor_signals()
@@ -123,7 +100,6 @@ class Switches(BaseView):
     Available methods: GET, POST
     """
 
-    @BaseView.authenticated
     async def get(self) -> web.Response:
         """Return all switches data."""
         switches = await self.database.get_switch_signals()
@@ -131,7 +107,6 @@ class Switches(BaseView):
             switch["value"] = await self.cache.get(f"{switch['id']}")
         return web.json_response({"status": "ok", "switches": switches})
 
-    @BaseView.authenticated
     async def post(self) -> web.Response:
         """Toggle switch."""
         data = await self.post()
@@ -152,13 +127,11 @@ class Sounds(BaseView):
     Available methods: GET, POST
     """
 
-    @BaseView.authenticated
     async def get(self) -> web.Response:
         """Return all sound data."""
         sounds = await self.database.get_sound_signals()
         return web.json_response({"status": "ok", "sounds": sounds})
 
-    @BaseView.authenticated
     async def post(self) -> web.Response:
         """Play sound."""
         url = self.request.query.get("url")
@@ -176,7 +149,6 @@ class Cameras(BaseView):
     Available methods: GET
     """
 
-    @BaseView.authenticated
     async def get(self) -> web.Response:
         """Return all available cameras."""
         cameras = await self.database.get_camera_signals()
@@ -287,10 +259,9 @@ class Subscribe(BaseView):
     Available methods: POST
     """
 
-    @BaseView.authenticated
     async def post(self) -> web.Response:
         """Add new subscription info."""
-        subscription = await self.post()
+        subscription = await self.request.json()
         result = await self.database.add_subscription(subscription)
         if not result:
             return web.json_response({"status": "error"}, status=500)
@@ -300,14 +271,18 @@ class Subscribe(BaseView):
 class ServiceWorker(web.View):
     """Render static service worker file."""
 
+    path = Path(__file__).parent / "static" / "service-worker.js"
+
     async def get(self) -> web.FileResponse:
         """Render static service worker file."""
-        return FileResponse("static/service-worker.js")
+        return FileResponse(self.path)
 
 
 class Favicon(web.View):
     """Render static favicon file."""
 
+    path = Path(__file__).parent / "static" / "img" / "logo_512.png"
+
     async def get(self) -> web.FileResponse:
         """Render static favicon file."""
-        return FileResponse("static/favicon.png")
+        return FileResponse(self.path)

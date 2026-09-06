@@ -63,7 +63,7 @@ class DBClient:
         try:
             result = await conn.fetch(
                 query,
-                datetime.datetime.now(tz=datetime.UTC),
+                datetime.datetime.now(tz=datetime.UTC).replace(tzinfo=None),
                 subscription["endpoint"],
                 subscription["key"],
                 subscription["authSecret"],
