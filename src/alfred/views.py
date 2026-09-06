@@ -75,7 +75,7 @@ class Home(BaseView):
         """Render home page."""
         context = {
             "vapid_public_key": self.config.VAPID_PUBLIC_KEY,
-            "session": self.request.session,
+            "session": self.request.get("session", {}),
         }
         return aiohttp_jinja2.render_template("home.html", self.request, context=context)
 
@@ -109,7 +109,7 @@ class Switches(BaseView):
 
     async def post(self) -> web.Response:
         """Toggle switch."""
-        data = await self.post()
+        data = await self.request.json()
         sid = data.get("sid", "0")
         signals = await self.database.get_switch_signals(int(sid))
         signal = signals[0]

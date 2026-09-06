@@ -26,8 +26,8 @@ async def auth_middleware(request: web.Request, handler: Callable) -> web.Respon
     """
     if request.path.startswith("/login"):
         return await handler(request)
-    request.session = await get_session(request)
-    if "username" not in request.session:
+    request["session"] = await get_session(request)
+    if "username" not in request["session"]:
         next_url = request.rel_url or "/"
         login_url = f"/login?next={next_url}"
         return web.HTTPFound(login_url)
