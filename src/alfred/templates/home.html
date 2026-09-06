@@ -9,7 +9,7 @@
 	<link rel="stylesheet" href="/static/css/base.css">
 	<script src="/static/js/jquery-3.2.1.min.js"></script>
 	<script>
-		window.vapidPublicKey = "{{ vapid_public_key }}";
+		window.vapidPublicKey = "{{vapid_public_key}}";
 	</script>
 	<script src="/static/js/jsmpeg.min.js"></script>
 	<script src="/static/js/base.js"></script>
@@ -24,7 +24,7 @@
 		<a href="javascript:void(0);" class="icon" onclick="topNav()">&#9776;</a>
 	</div>
 	<div id="content">
-		<h2>Welcome, <strong>{{current_user}}</strong>!</h2>
+		<h2>Welcome, <strong>{{session.username}}</strong>!</h2>
 		<p>Alfred is ready.</p>
          <form action="/logout/" method="post" style="display: inline-block;">
            <button>Log out</button>
