@@ -33,6 +33,33 @@ def time_to_minutes(time_value: str) -> int:
     parts = time_value.split(":")
     return int(parts[0]) * 60 + int(parts[1])
 
+async def handle_schedule(signal: dict[str, Any], app: web.Application) -> None:
+    """Handle signals that need to follow a schedule.
+
+    :param signal: signal definition
+    :param app: web application instance
+    """
+    now = datetime.datetime.now().astimezone()
+    now_minutes = time_to_minutes(now.strftime("%H:%M"))
+    start_time = signal["attributes"]["schedule"]["start"]
+    start_time = time_to_minutes(start_time)
+    stop_time = signal["attributes"]["schedule"]["stop"]
+    stop_time = time_to_minutes(stop_time)
+    current_value = await app[appkeys.cache].get(signal["id"])
+    if start_time <= stop_time:
+        if start_time <= now_minutes < stop_time and not current_value:
+            await control_switch(signal, "1")
+            await app[appkeys.cache].set(signal["id"], value=True)
+        elif not (start_time <= now_minutes < stop_time) and current_value:
+            await control_switch(signal, "0")
+            await app[appkeys.cache].set(signal["id"], value=False)
+    elif stop_time <= now_minutes < start_time and current_value:
+        await control_switch(signal, "0")
+        await app[appkeys.cache].set(signal["id"], value=False)
+    elif not (stop_time <= now_minutes < start_time) and not current_value:
+        await control_switch(signal, "1")
+        await app[appkeys.cache].set(signal["id"], value=True)
+
 
 async def control(app: web.Application) -> None:
     """Retrieve signal value and check that schedules are implemented.
@@ -42,8 +69,6 @@ async def control(app: web.Application) -> None:
     error_msg = ""
     client = aiohttp.client.ClientSession()
     signals = await app[appkeys.database].get_signals()
-    now = datetime.datetime.now().astimezone()
-    now_minutes = time_to_minutes(now.strftime("%H:%M"))
     for signal in signals:
         if not signal["active"]:
             continue
@@ -57,34 +82,18 @@ async def control(app: web.Application) -> None:
                 value = "1" if aux.get("curvals", {}).get("torch", "") == "on" else "0"
             else:
                 response = await client.get(signal["url"])
-                value = response.text()
+                value = await response.text()
         except Exception as exc:
             error_msg += f"cannot retrieve signal data for {signal['name']}: {exc}"
             logger.exception("cannot retrieve signal data")
             continue
         if signal["stype"] == "sensor":
-            app[appkeys.cache][signal["id"]] = value
+            await app[appkeys.cache].set(signal["id"], value)
             continue
         # Handle switch value and schedule
-        app[appkeys.cache][signal["id"]] = value in ["1", "1,1"]
+        await app[appkeys.cache].set(signal["id"], value in ["1", "1,1"])
         if signal["attributes"].get("schedule", None):
-            start_time = signal["attributes"]["schedule"]["start"]
-            start_time = time_to_minutes(start_time)
-            stop_time = signal["attributes"]["schedule"]["stop"]
-            stop_time = time_to_minutes(stop_time)
-            if start_time <= stop_time:
-                if start_time <= now_minutes < stop_time and not app[appkeys.cache][signal["id"]]:
-                    await control_switch(signal, "1")
-                    app[appkeys.cache][signal["id"]] = True
-                elif not (start_time <= now_minutes < stop_time) and app[appkeys.cache][signal["id"]]:
-                    await control_switch(signal, "0")
-                    app[appkeys.cache][signal["id"]] = False
-            elif stop_time <= now_minutes < start_time and app[appkeys.cache][signal["id"]]:
-                await control_switch(signal, "0")
-                app[appkeys.cache][signal["id"]] = False
-            elif not (stop_time <= now_minutes < start_time) and not app[appkeys.cache][signal["id"]]:
-                await control_switch(signal, "1")
-                app[appkeys.cache][signal["id"]] = True
+            await handle_schedule(signal, app)
     await client.close()
     if error_msg:
         raise ControlError(error_msg)

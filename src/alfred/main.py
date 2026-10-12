@@ -109,11 +109,10 @@ def make_app() -> web.Application:
     _ = app.router.add_view(r"/switches{tail:.*?}", views.Switches)
     _ = app.router.add_view(r"/sounds{tail:.*?}", views.Sounds)
     _ = app.router.add_view(r"/cameras{tail:.*?}", views.Cameras)
-    _ = app.router.add_view(r"/http_video{tail:.*?}", views.VideoHTTP)
     _ = app.router.add_view(r"/subscribe{tail:.*?}", views.Subscribe)
     _ = app.router.add_view("/favicon.ico", views.Favicon)
     _ = app.router.add_view("/service-worker.js", views.ServiceWorker)
-    _ = app.router.add_route("get", "/ws_video{tail:.*?}", views.websocket_handler)
+    _ = app.router.add_route("get", "/ws_video{tail:.*?}", views.VideoWS)
     _ = app.router.add_static("/static", Path(__file__).parent / "static")
     app[appkeys.config] = settings
     app[appkeys.database] = DBClient(settings.DSN)
