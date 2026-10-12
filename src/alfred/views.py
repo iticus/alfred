@@ -156,102 +156,42 @@ class Cameras(BaseView):
 
 
 class VideoHTTP(BaseView):
-    """Request Handler for "/http_video/" ."""
+    """Request Handler for "/http_video/."""
 
-    def open(self) -> None:
-        """Handle new http video request."""
+    async def get(self) -> web.WebSocketResponse:
+        """Serve HTTP video frames over a websocket."""
+        url = self.request.query.get("url")
+        if not url:
+            raise web.HTTPBadRequest(text="missing URL")
+
         logger.info("new http_video client %s", self)
-        if not self.get_secure_cookie("username"):
-            logger.warning("received non-aunthenticated connection")
-            return self.close()
-        self.url = self.request.get("url", None)
-        if not self.url:
-            return self.close()
-        self.client = aiohttp.client.ClientSession()
-        return None
+        ws = web.WebSocketResponse()
+        await ws.prepare(self.request)
 
-    def on_close(self) -> None:
-        """Handle http video closing."""
+        async with aiohttp.client.ClientSession() as client:
+            async for message in ws:
+                if message.type == aiohttp.WSMsgType.TEXT:
+                    if message.data == "?":
+                        try:
+                            async with client.get(url) as response:
+                                response.raise_for_status()
+                                await ws.send_bytes(await response.read())
+                        except (aiohttp.ClientError, TimeoutError):
+                            logger.exception("cannot handle mjpeg data")
+                            await ws.close()
+                            break
+                    elif message.data == "!":
+                        logger.info("closing websocket by client request")
+                        await ws.close()
+                        break
+                    else:
+                        await ws.send_str(message.data)
+                elif message.type == aiohttp.WSMsgType.ERROR:
+                    logger.error("websocket connection closed with exception %s", ws.exception())
+
         logger.info("removing ws http_video client %s", self)
-
-    async def on_message(self, message: str) -> None:
-        """Handle message on websocket connection."""
-        try:
-            if message == "?":
-                image = await self.client.get(self.url)
-                self.write_message(image.body, binary=True)
-            elif message == "!":
-                logger.info("closing websocket by client request")
-                self.close()
-            else:
-                self.write_message(message)  # echo
-        except Exception:
-            logger.exception("cannot handle mjpeg data")
-            self.close()
-
-async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
-    """Handle websocket connection.
-
-    :param request: web request to handle
-    """
-    ws = web.WebSocketResponse()
-    _ = await ws.prepare(request)
-    url = request.query.get("url", None)
-    if not url:
         return ws
-    session = aiohttp.client.ClientSession()
-    async with session.ws_connect(url) as wsc:
-        async for msg in wsc:
-            if msg.type == aiohttp.WSMsgType.BINARY:
-                if msg.data == "close cmd":
-                    await ws.close()
-                    break
-                await ws.send_str(msg.data + "/answer")
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                break
-    async for msg in ws:
-        if msg.type == aiohttp.WSMsgType.TEXT:
-            if msg.data == "close":
-                await ws.close()
-            else:
-                await ws.send_str(msg.data + "/answer")
-        elif msg.type == aiohttp.WSMsgType.ERROR:
-            logger.error("ws connection closed with exception %s", ws.exception())
-    logger.info("websocket connection closed")
-    return ws
 
-
-'''
-class VideoWS(BaseView):
-    """
-    Request Handler for "/ws_video/"
-    """
-
-    async def open(self):
-        logging.info("new ws_video client %s", self)
-        if not self.get_secure_cookie("username"):
-            logging.warning("received non-aunthenticated ws connection")
-            return self.close()
-
-        self.upstream = await websocket_connect(url, on_message_callback=self.upstream_message)
-
-    def on_close(self):
-        self.upstream.close()
-        logging.info("removing ws_video client %s", self)
-
-    def on_message(self, message):
-        if message == "!":
-            logging.info("closing websocket by client request")
-            self.close()
-        elif message != "?":
-            logging.info("got ws message %s from %s", message, self)
-
-    def upstream_message(self, message):
-        try:
-            self.write_message(message, binary=True)
-        except WebSocketClosedError:
-            self.close()
-'''
 
 class Subscribe(BaseView):
     """Request Handler for "/subscribe" - handle push subscribe requests.
