@@ -155,8 +155,8 @@ class Cameras(BaseView):
         return web.json_response({"status": "ok", "cameras": cameras})
 
 
-class VideoHTTP(BaseView):
-    """Request Handler for "/http_video/."""
+class VideoWS(BaseView):
+    """Request Handler for "/ws_video/."""
 
     async def get(self) -> web.WebSocketResponse:
         """Serve HTTP video frames over a websocket."""
